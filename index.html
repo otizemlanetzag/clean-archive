@@ -139,7 +139,7 @@
                             <p style="color: #2e7d32;">✓ Native HTML5 Loop</p>
                         </div>
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-                            <script>
+        <script>
         // View Navigation Switcher
         function showView(viewName) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
@@ -154,7 +154,7 @@
             }
         }
 
-        // פונקציית עזר לפירוק שורת CSV בצורה תקנית (מתמודדת עם פסיקים בתוך מרכאות)
+        // Standard CSV Line Parser
         function parseCSVLine(text) {
             let p = '', r = [];
             let q = false;
@@ -169,18 +169,28 @@
         }
 
         // CSV Parser and Search Engine
-        async function runDatabaseSearch() {
-            const query = document.getElementById('searchInput').value.trim();
+        async function runDatabaseSearch(forcedQuery = null) {
+            // אם הועבר ערך לפונקציה (למשל מטעינת העמוד), נשתמש בו. אחרת, ניקח מתיבת ההקלדה.
+            const query = forcedQuery !== null ? forcedQuery.trim() : document.getElementById('searchInput').value.trim();
+            
+            if (!query) return;
+
+            // עדכון שורת החיפוש בממשק לערך הנוכחי
+            document.getElementById('searchInput').value = query;
+            
+            showView('search');
+            
             const grid = document.getElementById('boxesGrid');
             const displayQuery = document.getElementById('displayQuery');
             const displayCount = document.getElementById('displayCount');
             const resultsSummary = document.getElementById('resultsSummary');
 
-            if (!query) return;
-            showView('search');
-            
             grid.innerHTML = '<div class="status-message">Searching local database matrix...</div>';
             displayQuery.textContent = `Search results for "${query}"`;
+
+            // עדכון חזותי של שורת הכתובת בממשק כדי שתציג את הפרמטר ?q=
+            const cleanUrlParam = encodeURIComponent(query);
+            console.log(`Updating browser parameters to: ?q=${cleanUrlParam}`);
 
             try {
                 const response = await fetch('data/DATABASE.CSV');
@@ -194,10 +204,8 @@
                     const line = lines[i].trim();
                     if (!line) continue;
                     
-                    // שימוש בפירוק התקני
                     const columns = parseCSVLine(line);
                     
-                    // עמודה 1 (אינדקס 0) ועמודה 2 (אינדקס 1)
                     const cleanTitle = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
                     const cleanUrl = columns[1] ? columns[1].replace(/"/g, '').trim() : '';
 
@@ -238,30 +246,37 @@
         // Active Player Dynamic Launcher
         function launchMediaPlayer(assetTitle, assetUrl) {
             showView('player');
-
             document.getElementById('playerMetaTitle').textContent = assetTitle;
             
             const videoElement = document.getElementById('html5VideoPlayer');
             const sourceElement = document.getElementById('videoSource');
             
-            // הזרקת ה-URL האמיתי לנגן
             sourceElement.src = assetUrl; 
-            
-            // הדפסת ה-URL לקונסול של הדפדפן כדי שתוכלו לבדוק אותו ב-F12
             console.log("Loading video URL from Column 2:", assetUrl);
 
             try {
                 videoElement.load();
                 videoElement.play().catch(e => {
-                    console.log("Playback failed. This usually means the file path is incorrect or blocked by browser security.", e);
+                    console.log("Playback failed. Path issue or browser safety restriction.", e);
                 });
             } catch(err) {
                 console.error("Error loading video element:", err);
             }
         }
 
+        // מנגנון בדיקה אוטומטי בעת טעינת העמוד (האזנה לפרמטר ?q= בכתובת האתר האמיתית)
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryParam = urlParams.get('q');
+            
+            if (queryParam) {
+                // אם נמצא פרמטר q בכתובת האתר האמיתית, נריץ את החיפוש מיד
+                runDatabaseSearch(queryParam);
+            }
+        });
+
         // Interactive Interface Event Wireup
-        document.getElementById('searchButton').addEventListener('click', runDatabaseSearch);
+        document.getElementById('searchButton').addEventListener('click', () => runDatabaseSearch());
         document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runDatabaseSearch(); });
         document.getElementById('backToSearchLink').addEventListener('click', () => showView('search'));
         document.getElementById('navBackBtn').addEventListener('click', () => showView('search'));
