@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Platform - Search & Player</title>
+    <title>Database Platform - Search & Multi-Viewer</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
         body { background-color: #f5f5f5; padding: 20px; }
@@ -49,11 +49,15 @@
         .box-title { font-size: 15px; color: #222; margin-bottom: 6px; font-weight: 500; }
         .status-message { text-align: center; color: #666; padding: 40px; font-size: 16px; grid-column: 1 / -1; }
 
-        /* Media Player Layout styling */
+        /* Multi-Viewer Layout styling */
         .back-link { display: inline-flex; align-items: center; gap: 6px; color: #0066cc; text-decoration: none; font-size: 14px; margin-bottom: 20px; font-weight: 500; cursor: pointer; }
         .viewer-layout { display: flex; gap: 24px; }
-        .main-display { flex-grow: 1; background-color: #1a1a1a; border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 450px; border: 1px solid #333; padding: 10px; }
-        .native-video { width: 100%; max-height: 430px; border-radius: 4px; outline: none; background: #000; }
+        .main-display { flex-grow: 1; background-color: #1a1a1a; border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 450px; border: 1px solid #333; padding: 10px; position: relative; }
+        
+        /* Elements display controls */
+        .native-video { width: 100%; max-height: 430px; border-radius: 4px; outline: none; background: #000; display: none; }
+        .native-image { max-width: 100%; max-height: 430px; border-radius: 4px; object-fit: contain; display: none; }
+        
         .metadata-sidebar { width: 280px; flex-shrink: 0; background-color: #fbfbfb; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 20px; text-align: left; }
         .asset-title { font-size: 20px; color: #222; font-weight: 600; line-height: 1.3; border-bottom: 1px solid #eee; padding-bottom: 12px; }
         .meta-group h4 { font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
@@ -69,7 +73,7 @@
         <!-- Tabs Bar -->
         <div class="tabs-bar">
             <div id="tabHome" class="tab active"><span class="tab-icon"></span><span>Search Workspace</span></div>
-            <div id="tabPlayer" class="tab"><span class="tab-icon"></span><span>Media Player</span></div>
+            <div id="tabPlayer" class="tab"><span class="tab-icon"></span><span>Asset Viewer</span></div>
             <div class="add-tab-btn">+</div>
         </div>
 
@@ -101,7 +105,7 @@
                         <div class="filter-section">
                             <h4>Category</h4>
                             <label class="filter-option"><input type="checkbox" checked> Videos / Movies</label>
-                            <label class="filter-option"><input type="checkbox"> Images</label>
+                            <label class="filter-option"><input type="checkbox" checked> Images</label>
                             <label class="filter-option"><input type="checkbox"> Code</label>
                         </div>
                     </aside>
@@ -114,7 +118,7 @@
                 </div>
             </section>
 
-            <!-- SECTION 2: HTML5 MEDIA PLAYER VIEW -->
+            <!-- SECTION 2: MULTI-VIEWER VIEW (VIDEO & IMAGE) -->
             <section id="playerSection" class="view-section">
                 <div class="back-link" id="backToSearchLink">&larr; Back to Search Results</div>
                 <div class="viewer-layout">
@@ -123,24 +127,35 @@
                             <source id="videoSource" src="" type="video/mp4">
                             Your browser does not support HTML5 video.
                         </video>
+                        
+                        <img id="html5ImageViewer" class="native-image" src="" alt="Database Image Asset Preview" />
                     </main>
                     <aside class="metadata-sidebar">
-                        <h3 class="asset-title" id="playerMetaTitle">Video_Asset_Name</h3>
+                        <h3 class="asset-title" id="playerMetaTitle">Asset_Name</h3>
                         <div class="meta-group">
                             <h4>Content Type</h4>
-                            <p>Video / Movie</p>
+                            <p id="playerMetaType">Unknown</p>
                         </div>
                         <div class="meta-group">
                             <h4>Source Location</h4>
                             <p>data/DATABASE.CSV</p>
                         </div>
                         <div class="meta-group">
-                            <h4>Player Status</h4>
-                            <p style="color: #2e7d32;">✓ Native HTML5 Loop</p>
+                            <h4>Status</h4>
+                            <p style="color: #2e7d32;" id="playerMetaStatus">✓ Loaded</p>
                         </div>
-///////////////////////////////////////////////////////////////////////////////////////////////////
+                        <button class="action-btn" id="downloadBtn">Download Asset</button>
+                    </aside>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
     <script>
-        // View Navigation Switcher
+        let currentAssetUrl = '';
+        let currentAssetTitle = '';
+
         function showView(viewName) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -154,7 +169,6 @@
             }
         }
 
-        // Standard CSV Line Parser
         function parseCSVLine(text) {
             let p = '', r = [];
             let q = false;
@@ -168,16 +182,11 @@
             return r;
         }
 
-        // CSV Parser and Search Engine
         async function runDatabaseSearch(forcedQuery = null, updateUrl = true) {
-            // לוקח את הערך מהפרמטר או מתיבת ההקלדה בשורת הכתובת המדומה
             const query = forcedQuery !== null ? forcedQuery.trim() : document.getElementById('searchInput').value.trim();
-            
             if (!query) return;
 
-            // מעדכן את התיבה הוויזואלית לערך הנוכחי
             document.getElementById('searchInput').value = query;
-            
             showView('search');
             
             const grid = document.getElementById('boxesGrid');
@@ -188,7 +197,6 @@
             grid.innerHTML = '<div class="status-message">Searching local database matrix...</div>';
             displayQuery.textContent = `Search results for "${query}"`;
 
-            // מנגנון קריטי: מעדכן את ה-URL האמיתי של הדפדפן למעלה במידה והחיפוש בוצע ידנית
             if (updateUrl) {
                 const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?q=' + encodeURIComponent(query);
                 window.history.pushState({ path: newUrl }, '', newUrl);
@@ -199,7 +207,8 @@
                 if (!response.ok) throw new Error('Could not find data/DATABASE.CSV file.');
 
                 const csvText = await response.text();
-                const lines = csvText.split('\n');
+                const lines = csvText.split('
+');
                 const matchedItems = [];
 
                 for (let i = 1; i < lines.length; i++) {
@@ -207,7 +216,6 @@
                     if (!line) continue;
                     
                     const columns = parseCSVLine(line);
-                    
                     const cleanTitle = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
                     const cleanUrl = columns[1] ? columns[1].replace(/"/g, '').trim() : '';
 
@@ -226,16 +234,19 @@
                     resultsSummary.textContent = `Showing 1-${matchedItems.length} of ${matchedItems.length}`;
                     
                     matchedItems.forEach((item) => {
+                        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.url);
+                        const placeholderIcon = isImg ? '🖼️' : '▶';
+
                         const box = document.createElement('div');
                         box.className = 'content-box';
                         box.innerHTML = `
-                            <div class="box-image-placeholder">▶</div>
+                            <div class="box-image-placeholder">${placeholderIcon}</div>
                             <h3 class="box-title">${item.title}</h3>
-                            <p style="font-size: 12px; color: #777;">Click to play this video file</p>
+                            <p style="font-size: 12px; color: #777;">Click to view this ${isImg ? 'image' : 'video'} asset</p>
                         `;
                         
                         box.addEventListener('click', function() {
-                            launchMediaPlayer(item.title, item.url);
+                            launchAssetViewer(item.title, item.url);
                         });
                         grid.appendChild(box);
                     });
@@ -245,46 +256,80 @@
             }
         }
 
-        // Active Player Dynamic Launcher
-        function launchMediaPlayer(assetTitle, assetUrl) {
+        function launchAssetViewer(assetTitle, assetUrl) {
             showView('player');
+            currentAssetUrl = assetUrl;
+            currentAssetTitle = assetTitle;
+
             document.getElementById('playerMetaTitle').textContent = assetTitle;
             
             const videoElement = document.getElementById('html5VideoPlayer');
-            const sourceElement = document.getElementById('videoSource');
-            
-            sourceElement.src = assetUrl; 
-            console.log("Loading video URL from Column 2:", assetUrl);
+            const imageElement = document.getElementById('html5ImageViewer');
+            const metaType = document.getElementById('playerMetaType');
+            const metaStatus = document.getElementById('playerMetaStatus');
 
-            try {
-                videoElement.load();
-                videoElement.play().catch(e => {
-                    console.log("Playback failed. Path issue or browser safety restriction.", e);
-                });
-            } catch(err) {
-                console.error("Error loading video element:", err);
+            videoElement.pause();
+
+            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(assetUrl);
+
+            if (isImage) {
+                videoElement.style.display = 'none';
+                imageElement.style.display = 'block';
+                imageElement.src = assetUrl;
+                
+                metaType.textContent = 'Image Asset';
+                metaStatus.textContent = '✓ Native Browser Rendering';
+                metaStatus.style.color = '#2e7d32';
+            } else {
+                imageElement.style.display = 'none';
+                videoElement.style.display = 'block';
+                
+                const sourceElement = document.getElementById('videoSource');
+                sourceElement.src = assetUrl;
+                
+                metaType.textContent = 'Video / Movie';
+                metaStatus.textContent = '✓ HTML5 Native Loop';
+                metaStatus.style.color = '#2e7d32';
+
+                try {
+                    videoElement.load();
+                    videoElement.play().catch(e => console.log("Auto-play prevented.", e));
+                } catch(err) {
+                    console.error("Error loading video element:", err);
+                }
             }
         }
 
-        // האזנה לטעינת העמוד (בדיקה אם יש ?q= בכתובת כשהדף נפתח לראשונה)
+        function triggerAssetDownload() {
+            if (!currentAssetUrl) {
+                alert("No active asset loaded to download.");
+                return;
+            }
+
+            const downloadLink = document.createElement('a');
+            downloadLink.href = currentAssetUrl;
+            const fileExtension = currentAssetUrl.split('.').pop().split(/[\#\?]/)[0] || 'file';
+            downloadLink.download = `${currentAssetTitle}.${fileExtension}`;
+            
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const queryParam = urlParams.get('q');
-            
             if (queryParam) {
-                // מריץ את החיפוש האוטומטי, ומסמן לו false כדי שלא ישכתב את ה-URL שוב
                 runDatabaseSearch(queryParam, false);
             }
         });
 
-        // האזנה לכפתורי "קדימה" ו"אחורה" של הדפדפן האמיתי, כדי שהחיפושים ישתנו בהתאם
         window.addEventListener('popstate', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const queryParam = urlParams.get('q');
             if (queryParam) {
                 runDatabaseSearch(queryParam, false);
             } else {
-                // אם חזרנו לדף הבית הריק
                 document.getElementById('searchInput').value = '';
                 document.getElementById('boxesGrid').innerHTML = '<div class="status-message">Your database content will load here.</div>';
                 document.getElementById('displayQuery').textContent = 'Discover Assets';
@@ -294,13 +339,15 @@
             }
         });
 
-        // Interactive Interface Event Wireup
         document.getElementById('searchButton').addEventListener('click', () => runDatabaseSearch());
         document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runDatabaseSearch(); });
         document.getElementById('backToSearchLink').addEventListener('click', () => showView('search'));
         document.getElementById('navBackBtn').addEventListener('click', () => showView('search'));
         document.getElementById('tabHome').addEventListener('click', () => showView('search'));
         document.getElementById('tabPlayer').addEventListener('click', () => {
-            if(document.getElementById('playerMetaTitle').textContent !== 'Video_Asset_Name') showView('player');
+            if(document.getElementById('playerMetaTitle').textContent !== 'Asset_Name') showView('player');
         });
+        document.getElementById('downloadBtn').addEventListener('click', triggerAssetDownload);
     </script>
+</body>
+</html>
