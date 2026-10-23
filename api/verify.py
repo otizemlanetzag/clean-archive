@@ -81,9 +81,9 @@ REGISTRY_PATH = "data/OFFICIAL_SITES.json"
 
 
 def github_api(method, path, payload=None):
-    token = os.environ.get("CLEAN_ARCHIVE_GITHUB_TOKEN", "")
+    token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
-        raise RuntimeError("Registry storage is not configured. Set CLEAN_ARCHIVE_GITHUB_TOKEN in the deployment environment.")
+        raise RuntimeError("Registry storage is not configured. Set GITHUB_TOKEN in the deployment environment.")
     url = "https://api.github.com" + path
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(url, data=data, method=method, headers={
