@@ -178,11 +178,16 @@
                 for (let i = 1; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (!line) continue;
+                    
                     const columns = line.split(',');
+                    
+                    // עמודה 1 (אינדקס 0) - שם הסרטון
                     const cleanTitle = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
+                    // עמודה 2 (אינדקס 1) - ה-URL של הסרטון
+                    const cleanUrl = columns[1] ? columns[1].replace(/"/g, '').trim() : '';
 
                     if (cleanTitle.toLowerCase().includes(query.toLowerCase())) {
-                        matchedItems.push(cleanTitle);
+                        matchedItems.push({ title: cleanTitle, url: cleanUrl });
                     }
                 }
 
@@ -195,18 +200,18 @@
                     displayCount.textContent = `${matchedItems.length} matching files discovered`;
                     resultsSummary.textContent = `Showing 1-${matchedItems.length} of ${matchedItems.length}`;
                     
-                    matchedItems.forEach((title) => {
+                    matchedItems.forEach((item) => {
                         const box = document.createElement('div');
                         box.className = 'content-box';
                         box.innerHTML = `
                             <div class="box-image-placeholder">▶</div>
-                            <h3 class="box-title">${title}</h3>
+                            <h3 class="box-title">${item.title}</h3>
                             <p style="font-size: 12px; color: #777;">Click to play this video file</p>
                         `;
                         
-                        // CLICK EVENT: קורא לפונקציית הנגן בלחיצה
+                        // אירוע לחיצה: מעביר גם את השם וגם את ה-URL האמיתי מהעמודה השנייה
                         box.addEventListener('click', function() {
-                            launchMediaPlayer(title);
+                            launchMediaPlayer(item.title, item.url);
                         });
                         grid.appendChild(box);
                     });
@@ -217,20 +222,19 @@
         }
 
         // Active Player Dynamic Launcher
-        function launchMediaPlayer(assetTitle) {
-            // 1. מעביר קודם כל את התצוגה למסך הנגן כדי שהמשתמש יראה שמשהו קרה
+        function launchMediaPlayer(assetTitle, assetUrl) {
+            // 1. מעביר מיד את הממשק למסך הנגן
             showView('player');
 
             // 2. מעדכן את כותרת המטא-דאטה בצד
             document.getElementById('playerMetaTitle').textContent = assetTitle;
             
-            // 3. טוען את קובץ הווידאו
+            // 3. טוען את קובץ הווידאו באמצעות ה-URL האמיתי מהעמודה השנייה
             const videoElement = document.getElementById('html5VideoPlayer');
             const sourceElement = document.getElementById('videoSource');
             
-            // יצירת נתיב בטוח (encodeURIComponent מטפל ברווחים ובתווים מיוחדים בשם הקובץ)
-            const safeTitle = encodeURIComponent(assetTitle);
-            sourceElement.src = `data/movies/${safeTitle}.mp4`; 
+            // שימוש ב-URL הישיר מהדאטהבייס
+            sourceElement.src = assetUrl; 
             
             try {
                 videoElement.load();
