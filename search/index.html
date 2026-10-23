@@ -123,7 +123,7 @@
             displayQuery.textContent = `Search results for "${query}"`;
 
             try {
-                const response = await fetch('data/DATA.CSV');
+                const response = await fetch('../data/DATABASE.CSV');
                 if (!response.ok) throw new Error('Oops, we had an error.');
 
                 const csvText = await response.text();
