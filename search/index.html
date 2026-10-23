@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תוצאות חיפוש מתוך בסיס הנתונים</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+        body { background-color: #f5f5f5; padding: 20px; }
+        .site-container { width: 100%; max-width: 1200px; margin: 0 auto; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        /* שורת הכרטיסיות */
+        .tabs-bar { display: flex; align-items: flex-end; padding: 8px 8px 0 8px; background-color: #e0e0e0; overflow-x: auto; white-space: nowrap; }
+        .tab { display: flex; align-items: center; gap: 8px; background-color: #d0d0d0; padding: 6px 16px; border-radius: 8px 8px 0 0; font-size: 13px; color: #555; margin-left: 4px; cursor: pointer; }
+        .tab.active { background-color: #f0f0f0; color: #000; font-weight: 500; }
+        .tab-icon { width: 14px; height: 14px; background-color: #888; border-radius: 50%; }
+        .add-tab-btn { padding: 6px 10px; font-size: 16px; color: #555; cursor: pointer; margin-bottom: 2px; user-select: none; }
+
+        /* שורת הכתובת והניווט */
+        .nav-bar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background-color: #f0f0f0; border-bottom: 1px solid #ddd; }
+        .nav-buttons { display: flex; gap: 8px; align-items: center; }
+        .nav-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 50%; cursor: pointer; font-size: 16px; color: #555; }
+        .nav-btn:hover { background-color: #dbdbdb; }
+        .url-bar { flex-grow: 1; display: flex; align-items: center; background-color: #ffffff; border: 1px solid #ccc; border-radius: 20px; padding: 2px 14px; min-height: 32px; }
+        .url-input { width: 100%; border: none; outline: none; font-size: 14px; color: #333; background: transparent; }
+        .search-btn { background: none; border: none; cursor: pointer; color: #666; display: flex; align-items: center; justify-content: center; margin-left: auto; padding: 4px; }
+
+        /* תוכן האתר ופריסה */
+        .site-content { background-color: #ffffff; min-height: 500px; padding: 30px 24px; }
+        .search-header { margin-bottom: 24px; text-align: right; }
+        .search-title { font-size: 24px; color: #222; font-weight: 600; margin-bottom: 4px; }
+        .search-count { font-size: 14px; color: #666; }
+        .search-layout { display: flex; gap: 24px; }
+        
+        /* סרגל צד */
+        .filters-sidebar { width: 240px; flex-shrink: 0; background-color: #fcfcfc; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; text-align: right; align-self: flex-start; }
+        .filter-section h4 { font-size: 14px; color: #333; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 4px; font-weight: 600; }
+        .filter-option { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #555; margin-bottom: 8px; cursor: pointer; }
+        
+        /* גריד תוצאות */
+        .results-area { flex-grow: 1; }
+        .sorting-bar { display: flex; justify-content: space-between; align-items: center; background-color: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 16px; margin-bottom: 20px; font-size: 13px; color: #555; }
+        .boxes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .content-box { background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; text-align: right; }
+        .box-image-placeholder { width: 100%; height: 120px; background-color: #eceece; border-radius: 6px; margin-bottom: 12px; }
+        .box-title { font-size: 15px; color: #222; margin-bottom: 6px; font-weight: 500; }
+        .status-message { text-align: center; color: #666; padding: 40px; font-size: 16px; grid-column: 1 / -1; }
+
+        @media (max-width: 768px) { .search-layout { flex-direction: column; } .filters-sidebar { width: 100%; } .boxes-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="site-container">
+        <!-- 1. שורת הכרטיסיות -->
+        <div class="tabs-bar">
+            <div class="tab">
+                <span class="tab-icon"></span>
+                <span>דף הבית</span>
+            </div>
+            <div class="tab active">
+                <span class="tab-icon"></span>
+                <span>תוצאות חיפוש</span>
+            </div>
+            <div class="add-tab-btn">+</div>
+        </div>
+
+        <!-- 2. שורת הכתובת (תיבת החיפוש) -->
+        <div class="nav-bar">
+            <div class="nav-buttons">
+                <button class="nav-btn">&rarr;</button>
+                <button class="nav-btn">&larr;</button>
+                <button class="nav-btn">&#x21BB;</button>
+            </div>
+            <div class="url-bar">
+                <input type="text" id="searchInput" class="url-input" placeholder="הקלד לחיפוש בבסיס הנתונים ולחץ Enter..." />
+                <button class="search-btn" id="searchButton">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. אזור התוכן -->
+        <div class="site-content">
+            <div class="search-header">
+                <h2 class="search-title" id="displayQuery">תוצאות חיפוש</h2>
+                <div class="search-count" id="displayCount">אנא בצע חיפוש</div>
+            </div>
+            <div class="search-layout">
+                <aside class="filters-sidebar">
+                    <div class="filter-section">
+                        <h4>קטגוריה</h4>
+                        <label class="filter-option"><input type="checkbox"> תמונות</label>
+                        <label class="filter-option"><input type="checkbox"> טקסט</label>
+                        <label class="filter-option"><input type="checkbox"> קוד</label>
+                        <label class="filter-option"><input type="checkbox"> הקלטות</label>
+                        <label class="filter-option"><input type="checkbox"> וידאו</label>
+                        <label class="filter-option"><input type="checkbox"> סרטים</label>
+                        <label class="filter-option"><input type="checkbox"> דפי אינטרנט</label>
+                    </div>
+                </aside>
+                <main class="results-area">
+                    <div class="sorting-bar"><span id="resultsSummary">ממתין לקלט...</span></div>
+                    <div class="boxes-grid" id="boxesGrid">
+                        <div class="status-message">הקלידו משהו בשורת הכתובת למעלה כדי לחפש בקובץ ה-CSV.</div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- לוגיקת החיפוש ב-JavaScript -->
+    <script>
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const grid = document.getElementById('boxesGrid');
+            const displayQuery = document.getElementById('displayQuery');
+            const displayCount = document.getElementById('displayCount');
+            const resultsSummary = document.getElementById('resultsSummary');
+
+            if (!query) return;
+            grid.innerHTML = '<div class="status-message">searchig...</div>';
+            displayQuery.textContent = `search results for "${query}"`;
+
+            try {
+                const response = await fetch('data/DATA.CSV');
+                if (!response.ok) throw new Error('oops, we had an error.');
+
+                const csvText = await response.text();
+                const lines = csvText.split('\n');
+                const results = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    const columns = line.split(',');
+                    const firstColumnValue = columns[0] ? columns[0].replace(/"/g, '') : '';
+
+                    if (firstColumnValue.toLowerCase().includes(query.toLowerCase())) {
+                        results.push(firstColumnValue);
+                    }
+                }
+
+                grid.innerHTML = '';
+                if (results.length === 0) {
+                    grid.innerHTML = '<div class="status-message">no results.</div>';
+                    displayCount.textContent = '0results';
+                    resultsSummary.textContent = 'showing 0 results';
+                } else {
+                    displayCount.textContent = `found ${results.length} results`;
+                    resultsSummary.textContent = `showing 1-${results.length} from ${results.length}`;
+                    results.forEach((itemTitle) => {
+                        const box = document.createElement('div');
+                        box.className = 'content-box';
+                        box.innerHTML = `<div class="box-image-placeholder"></div><h3 class="box-title">${itemTitle}</h3><p style="font-size: 13px; color: #666;">נשלף בהצלחה מהעמודה הראשונה.</p>`;
+                        grid.appendChild(box);
+                    });
+                }
+            } catch (error) {
+                grid.innerHTML = `<div class="status-message" style="color: red;">שגיאה: ${error.message}<br><small>ודא שהקובץ קיים בנתיב: data/DATABASE.CSV</small></div>`;
+            }
+        }
+        document.getElementById('searchButton').addEventListener('click', performSearch);
+        document.getElementById('searchInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') performSearch(); });
+    </script>
+</body>
+</html>
