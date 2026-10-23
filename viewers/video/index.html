@@ -77,14 +77,14 @@
                 <button class="nav-btn">&#x21BB;</button>
             </div>
             <div class="url-bar">
-                <input type="text" class="url-input" value="https://your-platform.com" readonly />
+                <input type="text" class="url-input" id="assetUrl" value="" readonly />
             </div>
         </div>
 
         <!-- 3. Main Interface -->
         <div class="viewer-content">
             
-            <a href="#" class="back-link">&larr; Back to Results</a>
+            <a href="../../search/" class="back-link" id="backLink">&larr; Back to Results</a>
             
             <div class="viewer-layout">
                 
@@ -117,7 +117,7 @@
                 
                 <!-- Side Panel (Displays Database Metadata information) -->
                 <aside class="metadata-sidebar">
-                    <h3 class="asset-title" id="metaTitle">Sample_Row_Data_01</h3>
+                    <h3 class="asset-title" id="metaTitle">Select an asset</h3>
                     
                     <div class="meta-group">
                         <h4>Content Type</h4>
@@ -134,12 +134,40 @@
                         <p style="color: #2e7d32;">✓ Native Browser Rendering</p>
                     </div>
 
-                    <button class="action-btn btn-primary">Download Media</button>
+                    <button class="action-btn btn-primary" id="downloadMedia">Download Media</button>
                 </aside>
 
             </div>
         </div>
     </div>
 
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const url = params.get('url') || '';
+  const title = params.get('title') || 'Untitled asset';
+  const player = document.getElementById('mediaPlayer');
+  const source = document.getElementById('mediaSource');
+  document.getElementById('metaTitle').textContent = title;
+  document.getElementById('assetUrl').value = url;
+  document.getElementById('downloadMedia').addEventListener('click', () => {
+    if (!url) { alert('No media URL was provided. Return to search and select an asset.'); return; }
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = title.replace(/[^a-z0-9 _.-]/gi, '_') || 'media';
+    link.target = '_blank';
+    document.body.appendChild(link); link.click(); link.remove();
+  });
+  if (!url) {
+    document.getElementById('metaType').textContent = 'No asset selected';
+    player.style.display = 'none';
+    return;
+  }
+  source.src = url;
+  player.load();
+  document.getElementById('metaType').textContent = /\.(mp3|wav|ogg)(\?|$)/i.test(url) ? 'Audio / Recording' : 'Video / Movie';
+  document.getElementById('backLink').href = '../../search/?q=' + encodeURIComponent(title);
+})();
+</script>
 </body>
 </html>
