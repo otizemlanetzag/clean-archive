@@ -46,7 +46,7 @@ def fetch_public_page(url):
     try:
         for redirect_count in range(MAX_REDIRECTS + 1):
             current = validate_public_url(current)
-            response = session.get(current, headers=headers, timeout=(4, 7), allow_redirects=False, stream=True)
+            response = session.get(current, headers=headers, timeout=(3, 5), allow_redirects=False, stream=True)
             if response.is_redirect or response.is_permanent_redirect:
                 location = response.headers.get("Location")
                 response.close()
@@ -79,7 +79,6 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Access-Control-Allow-Origin", "same-origin")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
