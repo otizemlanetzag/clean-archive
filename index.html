@@ -104,9 +104,9 @@
                     <aside class="filters-sidebar">
                         <div class="filter-section">
                             <h4>Category</h4>
-                            <label class="filter-option"><input type="checkbox" checked> Videos / Movies</label>
-                            <label class="filter-option"><input type="checkbox" checked> Images</label>
-                            <label class="filter-option"><input type="checkbox"> Code</label>
+                            <label class="filter-option"><input id="filterVideos" type="checkbox" checked> Videos / Movies</label>
+                            <label class="filter-option"><input id="filterImages" type="checkbox" checked> Images</label>
+                            <label class="filter-option"><input id="filterCode" type="checkbox"> Code</label>
                         </div>
                     </aside>
                     <main class="results-area">
@@ -155,6 +155,8 @@
      <script>
         let currentAssetUrl = '';
         let currentAssetTitle = '';
+        let allSearchResults = [];
+        let activeSearchQuery = '';
 
         function showView(viewName) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
@@ -240,36 +242,60 @@
                     }
                 }
 
-                grid.innerHTML = '';
-                if (matchedItems.length === 0) {
-                    grid.innerHTML = '<div class="status-message">No matching assets located.</div>';
-                    displayCount.textContent = '0 results found';
-                    resultsSummary.textContent = 'Showing 0 items';
-                } else {
-                    displayCount.textContent = `${matchedItems.length} matching files discovered`;
-                    resultsSummary.textContent = `Showing 1-${matchedItems.length} of ${matchedItems.length}`;
-                    
-                    matchedItems.forEach((item) => {
-                        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.url);
-                        const placeholderIcon = isImg ? '🖼️' : '▶';
-
-                        const box = document.createElement('div');
-                        box.className = 'content-box';
-                        box.innerHTML = `
-                            <div class="box-image-placeholder">${placeholderIcon}</div>
-                            <h3 class="box-title">${item.title}</h3>
-                            <p style="font-size: 12px; color: #777;">Click to view this ${isImg ? 'image' : 'video'} asset</p>
-                        `;
-                        
-                        box.addEventListener('click', function() {
-                            launchAssetViewer(item.title, item.url);
-                        });
-                        grid.appendChild(box);
-                    });
-                }
+                allSearchResults = matchedItems;
+                activeSearchQuery = query;
+                applyFilters();
             } catch (error) {
                 grid.innerHTML = `<div class="status-message" style="color: red;">Search Failed: ${error.message}<br><small>Please make sure you are running a local server (CORS requirement) and your file is inside data/DATABASE.CSV</small></div>`;
             }
+        }
+
+        function applyFilters() {
+            const grid = document.getElementById('boxesGrid');
+            const displayCount = document.getElementById('displayCount');
+            const resultsSummary = document.getElementById('resultsSummary');
+            const showVideos = document.getElementById('filterVideos').checked;
+            const showImages = document.getElementById('filterImages').checked;
+            const showCode = document.getElementById('filterCode').checked;
+
+            const classify = item => {
+                const url = (item.url || '').split(/[?#]/)[0];
+                if (/\.(jpg|jpeg|png|gif|webp|bmp|svg|avif)$/i.test(url)) return 'image';
+                if (/\.(html?|css|js|mjs|cjs|py|rs|json|txt|xml|md|csv|ts|tsx|jsx|java|c|h|cpp|cs|php|sh|yml|yaml)$/i.test(url)) return 'code';
+                return 'video';
+            };
+            const filtered = allSearchResults.filter(item => {
+                const type = classify(item);
+                return (type === 'image' && showImages) || (type === 'video' && showVideos) || (type === 'code' && showCode);
+            });
+
+            grid.innerHTML = '';
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="status-message">No assets match the selected filters.</div>';
+            } else {
+                filtered.forEach(item => {
+                    const type = classify(item);
+                    const box = document.createElement('div');
+                    box.className = 'content-box';
+                    const preview = document.createElement('div');
+                    preview.className = 'box-image-placeholder';
+                    preview.textContent = type === 'image' ? '🖼️' : type === 'code' ? '〈/〉' : '▶';
+                    const title = document.createElement('h3');
+                    title.className = 'box-title';
+                    title.textContent = item.title;
+                    const description = document.createElement('p');
+                    description.style.cssText = 'font-size:12px;color:#777;';
+                    description.textContent = 'Click to view this ' + type + ' asset';
+                    box.append(preview, title, description);
+                    box.addEventListener('click', () => {
+                        if (type === 'code') window.open(item.url, '_blank', 'noopener');
+                        else launchAssetViewer(item.title, item.url);
+                    });
+                    grid.appendChild(box);
+                });
+            }
+            displayCount.textContent = filtered.length + ' matching files discovered';
+            resultsSummary.textContent = filtered.length ? 'Showing 1-' + filtered.length + ' of ' + filtered.length : 'Showing 0 items';
         }
 
         function launchAssetViewer(assetTitle, assetUrl) {
@@ -353,6 +379,9 @@
             }
         });
 
+        document.getElementById('filterVideos').addEventListener('change', applyFilters);
+        document.getElementById('filterImages').addEventListener('change', applyFilters);
+        document.getElementById('filterCode').addEventListener('change', applyFilters);
         document.getElementById('searchButton').addEventListener('click', () => runDatabaseSearch());
         document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runDatabaseSearch(); });
         document.getElementById('backToSearchLink').addEventListener('click', () => showView('search'));
