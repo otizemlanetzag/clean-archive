@@ -74,6 +74,7 @@
         <div class="tabs-bar">
             <div id="tabHome" class="tab active"><span class="tab-icon"></span><span>Search Workspace</span></div>
             <div id="tabPlayer" class="tab"><span class="tab-icon"></span><span>Asset Viewer</span></div>
+            <div id="tabVerify" class="tab"><span class="tab-icon"></span><span>Verify Site</span></div>
             <div class="add-tab-btn">+</div>
         </div>
 
@@ -122,6 +123,25 @@
             </section>
 
             <!-- SECTION 2: MULTI-VIEWER VIEW (VIDEO & IMAGE) -->
+            <section id="verifySection" class="view-section">
+                <div class="search-header">
+                    <h2 class="search-title">Verify ownership of an open-source website</h2>
+                    <div class="search-count">Add your website by proving you control its published source or page.</div>
+                </div>
+                <div style="max-width:760px;border:1px solid #e0e0e0;border-radius:10px;padding:22px;background:#fcfcfc;">
+                    <label for="verifyUrl" style="display:block;margin-bottom:8px;font-weight:600;">Website URL</label>
+                    <input id="verifyUrl" type="url" placeholder="https://example.org" style="width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-bottom:14px;" autocomplete="url">
+                    <button id="generateChallengeBtn" class="action-btn" style="margin:0 0 16px;">Generate verification text</button>
+                    <div id="challengeArea" style="display:none;margin-top:10px;">
+                        <p style="margin-bottom:8px;">Add this exact text to a publicly accessible page on your site, then click Verify.</p>
+                        <textarea id="verifyChallenge" readonly rows="3" style="width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;font:13px ui-monospace,monospace;resize:vertical;"></textarea>
+                        <button id="copyChallengeBtn" class="action-btn" style="margin:10px 0;">Copy verification text</button>
+                        <button id="verifyOwnershipBtn" class="action-btn" style="margin:0;">Verify ownership</button>
+                    </div>
+                    <p id="verifyStatus" role="status" style="margin-top:16px;white-space:pre-wrap;"></p>
+                </div>
+            </section>
+
             <section id="documentSection" class="view-section">
                 <div class="back-link" id="documentBackLink">&larr; Back to Search Results</div>
                 <div class="viewer-layout">
@@ -189,6 +209,9 @@
             } else if(viewName === 'player') {
                 document.getElementById('playerSection').classList.add('active');
                 document.getElementById('tabPlayer').classList.add('active');
+            } else if(viewName === 'verify') {
+                document.getElementById('verifySection').classList.add('active');
+                document.getElementById('tabVerify').classList.add('active');
             } else if(viewName === 'document') {
                 document.getElementById('documentSection').classList.add('active');
                 document.getElementById('tabPlayer').classList.add('active');
@@ -452,6 +475,55 @@
                 document.getElementById('resultsSummary').textContent = 'Awaiting input...';
                 showView('search');
             }
+        });
+
+
+        let currentVerificationChallenge = '';
+        document.getElementById('tabVerify').addEventListener('click', () => showView('verify'));
+        document.getElementById('generateChallengeBtn').addEventListener('click', () => {
+            const raw = document.getElementById('verifyUrl').value.trim();
+            let parsed;
+            try { parsed = new URL(raw); } catch { parsed = null; }
+            if (!parsed || !['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname.includes('.')) {
+                document.getElementById('verifyStatus').textContent = 'Enter a valid public website URL beginning with https:// or http://.';
+                return;
+            }
+            const bytes = new Uint8Array(24);
+            crypto.getRandomValues(bytes);
+            const token = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+            currentVerificationChallenge = 'CLEAN-ARCHIVE-OWNERSHIP:' + token;
+            document.getElementById('verifyChallenge').value = currentVerificationChallenge;
+            document.getElementById('challengeArea').style.display = 'block';
+            document.getElementById('verifyStatus').textContent = 'Challenge created. Publish the text above on the website, then verify.';
+        });
+        document.getElementById('copyChallengeBtn').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(currentVerificationChallenge);
+                document.getElementById('verifyStatus').textContent = 'Verification text copied.';
+            } catch {
+                document.getElementById('verifyChallenge').select();
+                document.getElementById('verifyStatus').textContent = 'Select and copy the verification text manually.';
+            }
+        });
+        document.getElementById('verifyOwnershipBtn').addEventListener('click', async () => {
+            const url = document.getElementById('verifyUrl').value.trim();
+            if (!currentVerificationChallenge) return;
+            const status = document.getElementById('verifyStatus');
+            status.textContent = 'Checking the published website…';
+            const button = document.getElementById('verifyOwnershipBtn');
+            button.disabled = true;
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({url, token: currentVerificationChallenge})
+                });
+                const data = await response.json();
+                status.textContent = data.message || (data.verified ? 'Website verified.' : 'Verification failed.');
+                status.style.color = data.verified ? '#176b35' : '#9b2424';
+            } catch {
+                status.textContent = 'Verification service is unavailable. Check that the site is deployed with its API enabled.';
+                status.style.color = '#9b2424';
+            } finally { button.disabled = false; }
         });
 
         document.getElementById('filterVideos').addEventListener('change', applyFilters);
