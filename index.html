@@ -136,7 +136,11 @@
                         <p style="margin-bottom:8px;">Add this exact text to a publicly accessible page on your site, then click Verify.</p>
                         <textarea id="verifyChallenge" readonly rows="3" style="width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;font:13px ui-monospace,monospace;resize:vertical;"></textarea>
                         <button id="copyChallengeBtn" class="action-btn" style="margin:10px 0;">Copy verification text</button>
-                        <button id="verifyOwnershipBtn" class="action-btn" style="margin:0;">Verify ownership</button>
+                        <label style="display:flex;gap:10px;align-items:flex-start;margin:12px 0;white-space:normal;line-height:1.5;">
+                            <input id="ownershipOpenSourceConsent" type="checkbox" style="margin-top:4px;flex-shrink:0;">
+                            <span>אני הבעלים של האתר, ומאשר שהוא קוד פתוח</span>
+                        </label>
+                        <button id="verifyOwnershipBtn" class="action-btn" style="margin:0;" disabled>Verify and add to official registry</button>
                     </div>
                     <p id="verifyStatus" role="status" style="margin-top:16px;white-space:pre-wrap;"></p>
                 </div>
@@ -505,7 +509,11 @@
                 document.getElementById('verifyStatus').textContent = 'Select and copy the verification text manually.';
             }
         });
+        const ownershipConsent = document.getElementById('ownershipOpenSourceConsent');
+        const verifyOwnershipButton = document.getElementById('verifyOwnershipBtn');
+        ownershipConsent.addEventListener('change', () => { verifyOwnershipButton.disabled = !ownershipConsent.checked; });
         document.getElementById('verifyOwnershipBtn').addEventListener('click', async () => {
+            if (!ownershipConsent.checked) { document.getElementById('verifyStatus').textContent = 'Please confirm that you own this website and that it is open source.'; return; }
             const url = document.getElementById('verifyUrl').value.trim();
             if (!currentVerificationChallenge) return;
             const status = document.getElementById('verifyStatus');
@@ -517,7 +525,7 @@
                     method: 'POST',
                     headers: {'Content-Type':'application/json', 'Accept':'application/json'},
                     cache: 'no-store',
-                    body: JSON.stringify({url, token: currentVerificationChallenge})
+                    body: JSON.stringify({url, token: currentVerificationChallenge, consent: ownershipConsent.checked})
                 });
                 const raw = await response.text();
                 let data = {};
