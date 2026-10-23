@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/verify.py": {
+      "maxDuration": 10
+    }
+  }
+}
