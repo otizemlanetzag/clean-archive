@@ -138,7 +138,8 @@
                             <h4>Player Status</h4>
                             <p style="color: #2e7d32;">✓ Native HTML5 Loop</p>
                         </div>
-    <script>
+///////////////////////////////////////////////////////////////////////////////////////////////////
+                            <script>
         // View Navigation Switcher
         function showView(viewName) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
@@ -151,6 +152,20 @@
                 document.getElementById('playerSection').classList.add('active');
                 document.getElementById('tabPlayer').classList.add('active');
             }
+        }
+
+        // פונקציית עזר לפירוק שורת CSV בצורה תקנית (מתמודדת עם פסיקים בתוך מרכאות)
+        function parseCSVLine(text) {
+            let p = '', r = [];
+            let q = false;
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                if (c === '"') { q = !q; }
+                else if (c === ',' && !q) { r.push(p); p = ''; }
+                else { p += c; }
+            }
+            r.push(p);
+            return r;
         }
 
         // CSV Parser and Search Engine
@@ -179,11 +194,11 @@
                     const line = lines[i].trim();
                     if (!line) continue;
                     
-                    const columns = line.split(',');
+                    // שימוש בפירוק התקני
+                    const columns = parseCSVLine(line);
                     
-                    // עמודה 1 (אינדקס 0) - שם הסרטון
+                    // עמודה 1 (אינדקס 0) ועמודה 2 (אינדקס 1)
                     const cleanTitle = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
-                    // עמודה 2 (אינדקס 1) - ה-URL של הסרטון
                     const cleanUrl = columns[1] ? columns[1].replace(/"/g, '').trim() : '';
 
                     if (cleanTitle.toLowerCase().includes(query.toLowerCase())) {
@@ -209,7 +224,6 @@
                             <p style="font-size: 12px; color: #777;">Click to play this video file</p>
                         `;
                         
-                        // אירוע לחיצה: מעביר גם את השם וגם את ה-URL האמיתי מהעמודה השנייה
                         box.addEventListener('click', function() {
                             launchMediaPlayer(item.title, item.url);
                         });
@@ -223,23 +237,23 @@
 
         // Active Player Dynamic Launcher
         function launchMediaPlayer(assetTitle, assetUrl) {
-            // 1. מעביר מיד את הממשק למסך הנגן
             showView('player');
 
-            // 2. מעדכן את כותרת המטא-דאטה בצד
             document.getElementById('playerMetaTitle').textContent = assetTitle;
             
-            // 3. טוען את קובץ הווידאו באמצעות ה-URL האמיתי מהעמודה השנייה
             const videoElement = document.getElementById('html5VideoPlayer');
             const sourceElement = document.getElementById('videoSource');
             
-            // שימוש ב-URL הישיר מהדאטהבייס
+            // הזרקת ה-URL האמיתי לנגן
             sourceElement.src = assetUrl; 
             
+            // הדפסת ה-URL לקונסול של הדפדפן כדי שתוכלו לבדוק אותו ב-F12
+            console.log("Loading video URL from Column 2:", assetUrl);
+
             try {
                 videoElement.load();
                 videoElement.play().catch(e => {
-                    console.log("Auto-play prevented or file not found, waiting for user click.");
+                    console.log("Playback failed. This usually means the file path is incorrect or blocked by browser security.", e);
                 });
             } catch(err) {
                 console.error("Error loading video element:", err);
