@@ -104,9 +104,9 @@
                     <aside class="filters-sidebar">
                         <div class="filter-section">
                             <h4>Category</h4>
-                            <label class="filter-option"><input type="checkbox" checked> Videos / Movies</label>
-                            <label class="filter-option"><input type="checkbox" checked> Images</label>
-                            <label class="filter-option"><input type="checkbox"> Code</label>
+                            <label class="filter-option"><input type="checkbox" id="filterVideos" checked> Videos / Movies</label>
+                            <label class="filter-option"><input type="checkbox" id="filterImages" checked> Images</label>
+                            <label class="filter-option"><input type="checkbox" id="filterCode"> Code</label>
                         </div>
                     </aside>
                     <main class="results-area">
@@ -127,7 +127,6 @@
                             <source id="videoSource" src="" type="video/mp4">
                             Your browser does not support HTML5 video.
                         </video>
-                        
                         <img id="html5ImageViewer" class="native-image" src="" alt="Database Image Asset Preview" />
                     </main>
                     <aside class="metadata-sidebar">
@@ -136,23 +135,15 @@
                             <h4>Content Type</h4>
                             <p id="playerMetaType">Unknown</p>
                         </div>
-                        <div class="meta-group">
-                            <h4>Source Location</h4>
-                            <p>data/DATABASE.CSV</p>
-                        </div>
-                        <div class="meta-group">
-                            <h4>Status</h4>
-                            <p style="color: #2e7d32;" id="playerMetaStatus">✓ Loaded</p>
-                        </div>
-                        <button class="action-btn" id="downloadBtn">Download Asset</button>
-                    </aside>
-                </div>
-            </section>
+Source Location
+data/DATABASE.CSV
 
-        </div>
-    </div>
+Status
+Loaded ✓
 
-     <script>
+Download Asset
+    <script>
+        let currentRawResults = [];
         let currentAssetUrl = '';
         let currentAssetTitle = '';
 
@@ -170,16 +161,79 @@
         }
 
         function parseCSVLine(text) {
+            if (!text) return [];
+            let separator = ',';
+            if (!text.includes(',') && text.includes(';')) { separator = ';'; }
             let p = '', r = [];
             let q = false;
             for (let i = 0; i < text.length; i++) {
                 let c = text[i];
                 if (c === '"') { q = !q; }
-                else if (c === ',' && !q) { r.push(p); p = ''; }
+                else if (c === separator && !q) { r.push(p.trim()); p = ''; }
                 else { p += c; }
             }
-            r.push(p);
+            r.push(p.trim());
             return r;
+        }
+
+        function renderResultsGrid(itemsList) {
+            const grid = document.getElementById('boxesGrid');
+            const displayCount = document.getElementById('displayCount');
+            const resultsSummary = document.getElementById('resultsSummary');
+
+            grid.innerHTML = '';
+
+            if (itemsList.length === 0) {
+                grid.innerHTML = '<div class="status-message">No matching assets found for the selected filters.</div>';
+                displayCount.textContent = '0 results found';
+                resultsSummary.textContent = 'Showing 0 items';
+                return;
+            }
+
+            displayCount.textContent = `${itemsList.length} files located`;
+            resultsSummary.textContent = `Showing 1-${itemsList.length} of ${itemsList.length}`;
+            
+            itemsList.forEach((item) => {
+                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.url);
+                const placeholderIcon = isImg ? '🖼️' : '▶';
+
+                const box = document.createElement('div');
+                box.className = 'content-box';
+                box.innerHTML = `
+                    <div class="box-image-placeholder">${placeholderIcon}</div>
+                    <h3 class="box-title">${item.title}</h3>
+                    <p style="font-size: 12px; color: #777;">Click to view this ${isImg ? 'image' : 'video'} asset</p>
+                `;
+                
+                box.addEventListener('click', function() {
+                    launchAssetViewer(item.title, item.url);
+                });
+                grid.appendChild(box);
+            });
+        }
+
+        function applyFilters() {
+            const showVideos = document.getElementById('filterVideos').checked;
+            const showImages = document.getElementById('filterImages').checked;
+            const showCode = document.getElementById('filterCode').checked;
+
+            const allUnchecked = !showVideos && !showImages && !showCode;
+
+            const filtered = currentRawResults.filter(item => {
+                if (allUnchecked) return true;
+
+                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.url);
+                const isVideo = /\.(mp4|webm|ogg|avi|mov|mkv)$/i.test(item.url) || (!isImg && !item.url.includes('.js') && !item.url.includes('.html') && !item.url.includes('.css'));
+                const isCode = /\.(js|html|css|py|json|txt)$/i.test(item.url);
+
+                if (showImages && isImg) return true;
+                if (showVideos && isVideo) return true;
+                if (showCode && isCode) return true;
+
+                return false;
+            });
+
+            renderResultsGrid(filtered);
         }
 
         async function runDatabaseSearch(forcedQuery = null, updateUrl = true) {
@@ -191,8 +245,6 @@
             
             const grid = document.getElementById('boxesGrid');
             const displayQuery = document.getElementById('displayQuery');
-            const displayCount = document.getElementById('displayCount');
-            const resultsSummary = document.getElementById('resultsSummary');
 
             grid.innerHTML = '<div class="status-message">Searching local database...</div>';
             displayQuery.textContent = `Search results for "${query}"`;
@@ -204,64 +256,37 @@
 
             try {
                 const response = await fetch('data/DATABASE.CSV');
-                if (!response.ok) throw new Error('Could not find or read data/DATABASE.CSV file.');
+                if (!response.ok) throw new Error('Could not read data/DATABASE.CSV.');
 
                 const csvText = await response.text();
-                const lines = csvText.split('\n');
-                const matchedItems = [];
+                const lines = csvText.split(/\r?\n/);
+                
+                currentRawResults = [];
 
-                for (let i = 1; i < lines.length; i++) {
-                    try {
-                        const line = lines[i].trim();
-                        if (!line) continue;
-                        
-                        const columns = parseCSVLine(line);
-                        
-                        // הגנה: מוודא שהעמודות קיימות בשורה לפני הניקוי שלהן
-                        const rawTitle = columns[0] ? columns[0] : '';
-                        const rawUrl = columns[1] ? columns[1] : '';
-                        
-                        const cleanTitle = rawTitle.replace(/"/g, '').trim();
-                        const cleanUrl = rawUrl.replace(/"/g, '').trim();
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const columns = parseCSVLine(line);
+                    if (!columns || columns.length === 0) continue;
+                    
+                    const rawTitle = columns[0] || '';
+                    const rawUrl = columns[1] || '';
+                    
+                    const cleanTitle = rawTitle.replace(/^"|"$/g, '').trim();
+                    const cleanUrl = rawUrl.replace(/^"|"$/g, '').trim();
 
-                        if (cleanTitle && cleanTitle.toLowerCase().includes(query.toLowerCase())) {
-                            matchedItems.push({ title: cleanTitle, url: cleanUrl });
-                        }
-                    } catch (lineError) {
-                        // אם שורה ספציפית ב-CSV שבורה, מדלגים עליה ולא תוקעים את כל האתר
-                        console.warn("Skipping malformed CSV line:", i, lineError);
+                    if (cleanTitle.toLowerCase() === 'title' || cleanTitle.toLowerCase() === 'name') continue;
+
+                    if (cleanTitle && cleanTitle.toLowerCase().includes(query.toLowerCase())) {
+                        currentRawResults.push({ title: cleanTitle, url: cleanUrl });
                     }
                 }
 
-                grid.innerHTML = '';
-                if (matchedItems.length === 0) {
-                    grid.innerHTML = '<div class="status-message">No matching assets located.</div>';
-                    displayCount.textContent = '0 results found';
-                    resultsSummary.textContent = 'Showing 0 items';
-                } else {
-                    displayCount.textContent = `${matchedItems.length} matching files discovered`;
-                    resultsSummary.textContent = `Showing 1-${matchedItems.length} of ${matchedItems.length}`;
-                    
-                    matchedItems.forEach((item) => {
-                        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(item.url);
-                        const placeholderIcon = isImg ? '🖼️' : '▶';
+                applyFilters();
 
-                        const box = document.createElement('div');
-                        box.className = 'content-box';
-                        box.innerHTML = `
-                            <div class="box-image-placeholder">${placeholderIcon}</div>
-                            <h3 class="box-title">${item.title}</h3>
-                            <p style="font-size: 12px; color: #777;">Click to view this ${isImg ? 'image' : 'video'} asset</p>
-                        `;
-                        
-                        box.addEventListener('click', function() {
-                            launchAssetViewer(item.title, item.url);
-                        });
-                        grid.appendChild(box);
-                    });
-                }
             } catch (error) {
-                grid.innerHTML = `<div class="status-message" style="color: red;">Search Failed: ${error.message}<br><small>Please make sure you are running a local server (CORS requirement) and your file is inside data/DATABASE.CSV</small></div>`;
+                grid.innerHTML = `<div class="status-message" style="color: red;">Search Failed: ${error.message}</div>`;
             }
         }
 
@@ -288,7 +313,6 @@
                 
                 metaType.textContent = 'Image Asset';
                 metaStatus.textContent = '✓ Native Browser Rendering';
-                metaStatus.style.color = '#2e7d32';
             } else {
                 imageElement.style.display = 'none';
                 videoElement.style.display = 'block';
@@ -298,22 +322,18 @@
                 
                 metaType.textContent = 'Video / Movie';
                 metaStatus.textContent = '✓ HTML5 Native Loop';
-                metaStatus.style.color = '#2e7d32';
 
                 try {
                     videoElement.load();
-                    videoElement.play().catch(e => console.log("Auto-play prevented.", e));
+                    videoElement.play().catch(e => console.log("Auto-play paused."));
                 } catch(err) {
-                    console.error("Error loading video element:", err);
+                    console.error(err);
                 }
             }
         }
 
         function triggerAssetDownload() {
-            if (!currentAssetUrl) {
-                alert("No active asset loaded to download.");
-                return;
-            }
+            if (!currentAssetUrl) return;
             const downloadLink = document.createElement('a');
             downloadLink.href = currentAssetUrl;
             const fileExtension = currentAssetUrl.split('.').pop().split(/[\#\?]/)[0] || 'file';
@@ -323,12 +343,14 @@
             document.body.removeChild(downloadLink);
         }
 
+        document.getElementById('filterVideos').addEventListener('change', applyFilters);
+        document.getElementById('filterImages').addEventListener('change', applyFilters);
+        document.getElementById('filterCode').addEventListener('change', applyFilters);
+
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const queryParam = urlParams.get('q');
-            if (queryParam) {
-                runDatabaseSearch(queryParam, false);
-            }
+            if (queryParam) { runDatabaseSearch(queryParam, false); }
         });
 
         window.addEventListener('popstate', () => {
@@ -339,23 +361,19 @@
             } else {
                 document.getElementById('searchInput').value = '';
                 document.getElementById('boxesGrid').innerHTML = '<div class="status-message">Your database content will load here.</div>';
-                document.getElementById('displayQuery').textContent = 'Discover Assets';
-                document.getElementById('displayCount').textContent = 'Enter a query above';
-                document.getElementById('resultsSummary').textContent = 'Awaiting input...';
                 showView('search');
             }
         });
 
         document.getElementById('searchButton').addEventListener('click', () => runDatabaseSearch());
         document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runDatabaseSearch(); });
-        document.getElementById('backToSearchLink').addEventListener('click', () => showView('search'));
-        document.getElementById('navBackBtn').addEventListener('click', () => showView('search'));
-        document.getElementById('tabHome').addEventListener('click', () => showView('search'));
-        document.getElementById('tabPlayer').addEventListener('click', () => {
-            if(document.getElementById('playerMetaTitle').textContent !== 'Asset_Name') showView('player');
-        });
-        document.getElementById('downloadBtn').addEventListener('click', triggerAssetDownload);
-    </script>
+document.getElementByld('backToSearchLink').addEventListener('click', () =>
+;showView('search'))
+document.getElementByld('navBackBtn').addEventListener('click', () =>
+;showView('search'))
+;document.getElementByld('tabHome').addEventListener('click', () => showView('search'))
+} <= (),'document.getElementByld('tabPlayer').addEventListener('click
+if(document.getElementByld('playerMetaTitle').textContent !== 'Asset_Name')
+;showView('player')
 
-</body>
-</html>
+;document.getElementByld('downloadBtn').addEventListener('click', triggerAssetDownload)
