@@ -1,0 +1,2 @@
+# Clean archive
+it started when I saw a [TOM & JERRY video on archive.org](https://archive.org/details/01_20220717_20220717_1817/Том+и+Джерри+1+часть/Том+и+Джерри++01-Кот+получает+по+заслугам.avi) tom and jerry are protected by copyright, but still, the are (or where) on archive.org, a project collecting content WITHOUT copyright. I decided that it needed to change. I began thinking how to prevent this. today, every content on Clean archive, is reviewed by humans, for a better place on internet.
