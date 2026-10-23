@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Content - HTML5 Player</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+        body { background-color: #f5f5f5; padding: 20px; }
+        .site-container { width: 100%; max-width: 1200px; margin: 0 auto; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        /* Tabs Bar */
+        .tabs-bar { display: flex; align-items: flex-end; padding: 8px 8px 0 8px; background-color: #e0e0e0; overflow-x: auto; white-space: nowrap; }
+        .tab { display: flex; align-items: center; gap: 8px; background-color: #d0d0d0; padding: 6px 16px; border-radius: 8px 8px 0 0; font-size: 13px; color: #555; margin-right: 4px; cursor: pointer; }
+        .tab.active { background-color: #f0f0f0; color: #000; font-weight: 500; }
+        .tab-icon { width: 14px; height: 14px; background-color: #888; border-radius: 50%; }
+        .add-tab-btn { padding: 6px 10px; font-size: 16px; color: #555; cursor: pointer; margin-bottom: 2px; user-select: none; }
+
+        /* Navigation Bar */
+        .nav-bar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background-color: #f0f0f0; border-bottom: 1px solid #ddd; }
+        .nav-buttons { display: flex; gap: 8px; align-items: center; }
+        .nav-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 50%; cursor: pointer; font-size: 16px; color: #555; }
+        .nav-btn:hover { background-color: #dbdbdb; }
+        .url-bar { flex-grow: 1; display: flex; align-items: center; background-color: #ffffff; border: 1px solid #ccc; border-radius: 20px; padding: 2px 14px; min-height: 32px; }
+        .url-input { width: 100%; border: none; outline: none; font-size: 14px; color: #333; background: transparent; }
+
+        /* Content Viewer Layout */
+        .viewer-content { background-color: #ffffff; min-height: 550px; padding: 24px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: #0066cc; text-decoration: none; font-size: 14px; margin-bottom: 20px; font-weight: 500; }
+        .back-link:hover { text-decoration: underline; }
+        
+        .viewer-layout { display: flex; gap: 24px; }
+        
+        /* Main Display Area for Media */
+        .main-display { flex-grow: 1; background-color: #1a1a1a; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 450px; position: relative; color: #ffffff; overflow: hidden; border: 1px solid #333; padding: 10px; }
+        
+        /* HTML5 Native Media Elements Elements styling */
+        .native-video { width: 100%; max-height: 430px; border-radius: 4px; outline: none; background: #000; }
+        .audio-container { width: 100%; max-width: 500px; text-align: center; padding: 40px 20px; }
+        .native-audio { width: 100%; margin-top: 20px; outline: none; }
+        
+        /* Sidebar Metadata Panel */
+        .metadata-sidebar { width: 280px; flex-shrink: 0; background-color: #fbfbfb; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .asset-title { font-size: 20px; color: #222; font-weight: 600; line-height: 1.3; border-bottom: 1px solid #eee; padding-bottom: 12px; }
+        .meta-group h4 { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .meta-group p { font-size: 14px; color: #333; font-weight: 500; }
+        
+        .action-btn { width: 100%; padding: 10px; border-radius: 6px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; display: block; margin-top: auto; }
+        .btn-primary { background-color: #0066cc; color: white; }
+        .btn-primary:hover { background-color: #0052a3; }
+
+        @media (max-width: 850px) { .viewer-layout { flex-direction: column; } .metadata-sidebar { width: 100%; } .main-display { min-height: 300px; } }
+    </style>
+</head>
+<body>
+
+    <div class="site-container">
+        
+        <!-- 1. Tabs Bar -->
+        <div class="tabs-bar">
+            <div class="tab">
+                <span class="tab-icon"></span>
+                <span>Home</span>
+            </div>
+            <div class="tab active">
+                <span class="tab-icon"></span>
+                <span>View Asset</span>
+            </div>
+            <div class="add-tab-btn">+</div>
+        </div>
+
+        <!-- 2. Navigation / Address Bar -->
+        <div class="nav-bar">
+            <div class="nav-buttons">
+                <button class="nav-btn">&larr;</button>
+                <button class="nav-btn">&rarr;</button>
+                <button class="nav-btn">&#x21BB;</button>
+            </div>
+            <div class="url-bar">
+                <input type="text" class="url-input" value="https://your-platform.com" readonly />
+            </div>
+        </div>
+
+        <!-- 3. Main Interface -->
+        <div class="viewer-content">
+            
+            <a href="#" class="back-link">&larr; Back to Results</a>
+            
+            <div class="viewer-layout">
+                
+                <!-- Center Window with HTML5 Native Media Controls -->
+                <main class="main-display">
+                    
+                    <!-- OPTION A: HTML5 Video & Movies Player -->
+                    <video class="native-video" controls poster="https://placeholder.com">
+                        <source src="movie.mp4" type="video/mp4">
+                        <source src="movie.ogg" type="video/ogg">
+                        Your browser does not support the HTML5 video tag.
+                    </video>
+
+                    <!-- OPTION B: HTML5 Audio & Recording Player (Uncomment to toggle view) -->
+                    <!-- 
+                    <div class="audio-container">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #888;">
+                            <path d="M12 1v11a4 4 0 0 0-4 4v2a4 4 0 0 0 8 0v-2a4 4 0 0 0-4-4z"></path>
+                            <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+                            <line x1="12" y1="22" x2="12" y2="19"></line>
+                        </svg>
+                        <audio class="native-audio" controls>
+                            <source src="audio.mp3" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div> 
+                    -->
+
+                </main>
+                
+                <!-- Side Panel (Displays Database Metadata information) -->
+                <aside class="metadata-sidebar">
+                    <h3 class="asset-title" id="metaTitle">Sample_Row_Data_01</h3>
+                    
+                    <div class="meta-group">
+                        <h4>Content Type</h4>
+                        <p id="metaType">Video / Movie</p>
+                    </div>
+                    
+                    <div class="meta-group">
+                        <h4>Database Source</h4>
+                        <p>DATABASE.CSV (Column 1)</p>
+                    </div>
+                    
+                    <div class="meta-group">
+                        <h4>HTML5 Player Status</h4>
+                        <p style="color: #2e7d32;">✓ Native Browser Rendering</p>
+                    </div>
+
+                    <button class="action-btn btn-primary">Download Media</button>
+                </aside>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
