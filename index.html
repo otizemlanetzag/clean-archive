@@ -496,6 +496,8 @@
             crypto.getRandomValues(bytes);
             const token = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
             currentVerificationChallenge = 'CLEAN-ARCHIVE-OWNERSHIP:' + token;
+            ownershipConsent.checked = false;
+            verifyOwnershipButton.disabled = true;
             document.getElementById('verifyChallenge').value = currentVerificationChallenge;
             document.getElementById('challengeArea').style.display = 'block';
             document.getElementById('verifyStatus').textContent = 'Challenge created. Publish the text above on the website, then verify.';
