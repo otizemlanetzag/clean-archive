@@ -152,7 +152,7 @@
         </div>
     </div>
 
-    <script>
+     <script>
         let currentAssetUrl = '';
         let currentAssetTitle = '';
 
@@ -194,7 +194,7 @@
             const displayCount = document.getElementById('displayCount');
             const resultsSummary = document.getElementById('resultsSummary');
 
-            grid.innerHTML = '<div class="status-message">Searching local database matrix...</div>';
+            grid.innerHTML = '<div class="status-message">Searching local database...</div>';
             displayQuery.textContent = `Search results for "${query}"`;
 
             if (updateUrl) {
@@ -204,23 +204,32 @@
 
             try {
                 const response = await fetch('data/DATABASE.CSV');
-                if (!response.ok) throw new Error('Could not find data/DATABASE.CSV file.');
+                if (!response.ok) throw new Error('Could not find or read data/DATABASE.CSV file.');
 
                 const csvText = await response.text();
-                const lines = csvText.split('
-');
+                const lines = csvText.split('\n');
                 const matchedItems = [];
 
                 for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    
-                    const columns = parseCSVLine(line);
-                    const cleanTitle = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
-                    const cleanUrl = columns[1] ? columns[1].replace(/"/g, '').trim() : '';
+                    try {
+                        const line = lines[i].trim();
+                        if (!line) continue;
+                        
+                        const columns = parseCSVLine(line);
+                        
+                        // הגנה: מוודא שהעמודות קיימות בשורה לפני הניקוי שלהן
+                        const rawTitle = columns[0] ? columns[0] : '';
+                        const rawUrl = columns[1] ? columns[1] : '';
+                        
+                        const cleanTitle = rawTitle.replace(/"/g, '').trim();
+                        const cleanUrl = rawUrl.replace(/"/g, '').trim();
 
-                    if (cleanTitle.toLowerCase().includes(query.toLowerCase())) {
-                        matchedItems.push({ title: cleanTitle, url: cleanUrl });
+                        if (cleanTitle && cleanTitle.toLowerCase().includes(query.toLowerCase())) {
+                            matchedItems.push({ title: cleanTitle, url: cleanUrl });
+                        }
+                    } catch (lineError) {
+                        // אם שורה ספציפית ב-CSV שבורה, מדלגים עליה ולא תוקעים את כל האתר
+                        console.warn("Skipping malformed CSV line:", i, lineError);
                     }
                 }
 
@@ -252,7 +261,7 @@
                     });
                 }
             } catch (error) {
-                grid.innerHTML = `<div class="status-message" style="color: red;">Search Failed: ${error.message}</div>`;
+                grid.innerHTML = `<div class="status-message" style="color: red;">Search Failed: ${error.message}<br><small>Please make sure you are running a local server (CORS requirement) and your file is inside data/DATABASE.CSV</small></div>`;
             }
         }
 
@@ -305,12 +314,10 @@
                 alert("No active asset loaded to download.");
                 return;
             }
-
             const downloadLink = document.createElement('a');
             downloadLink.href = currentAssetUrl;
             const fileExtension = currentAssetUrl.split('.').pop().split(/[\#\?]/)[0] || 'file';
             downloadLink.download = `${currentAssetTitle}.${fileExtension}`;
-            
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
@@ -349,5 +356,6 @@
         });
         document.getElementById('downloadBtn').addEventListener('click', triggerAssetDownload);
     </script>
+
 </body>
 </html>
