@@ -107,6 +107,9 @@
                             <label class="filter-option"><input id="filterVideos" type="checkbox" checked> Videos / Movies</label>
                             <label class="filter-option"><input id="filterImages" type="checkbox" checked> Images</label>
                             <label class="filter-option"><input id="filterCode" type="checkbox"> Code</label>
+                            <label class="filter-option"><input id="filterPdf" type="checkbox" checked> PDF documents</label>
+                            <label class="filter-option"><input id="filterText" type="checkbox" checked> Text files</label>
+                            <label class="filter-option"><input id="filterBinary" type="checkbox" checked> Binary (0s and 1s)</label>
                         </div>
                     </aside>
                     <main class="results-area">
@@ -257,16 +260,22 @@
             const showVideos = document.getElementById('filterVideos').checked;
             const showImages = document.getElementById('filterImages').checked;
             const showCode = document.getElementById('filterCode').checked;
+            const showPdf = document.getElementById('filterPdf').checked;
+            const showText = document.getElementById('filterText').checked;
+            const showBinary = document.getElementById('filterBinary').checked;
 
             const classify = item => {
                 const url = (item.url || '').split(/[?#]/)[0];
                 if (/\.(jpg|jpeg|png|gif|webp|bmp|svg|avif)$/i.test(url)) return 'image';
-                if (/\.(html?|css|js|mjs|cjs|py|rs|json|txt|xml|md|csv|ts|tsx|jsx|java|c|h|cpp|cs|php|sh|yml|yaml)$/i.test(url)) return 'code';
+                if (/\.pdf$/i.test(url)) return 'pdf';
+                if (/\.(txt|log|md|csv|json|xml|ya?ml|ini|cfg|conf)$/i.test(url)) return 'text';
+                if (/\.(html?|css|js|mjs|cjs|py|rs|ts|tsx|jsx|java|c|h|cpp|cs|php|sh)$/i.test(url)) return 'code';
+                if (/\.(bin|dat|exe|dll|so|o|obj|wasm|hex)$/i.test(url)) return 'binary';
                 return 'video';
             };
             const filtered = allSearchResults.filter(item => {
                 const type = classify(item);
-                return (type === 'image' && showImages) || (type === 'video' && showVideos) || (type === 'code' && showCode);
+                return (type === 'image' && showImages) || (type === 'video' && showVideos) || (type === 'code' && showCode) || (type === 'pdf' && showPdf) || (type === 'text' && showText) || (type === 'binary' && showBinary);
             });
 
             grid.innerHTML = '';
@@ -279,7 +288,7 @@
                     box.className = 'content-box';
                     const preview = document.createElement('div');
                     preview.className = 'box-image-placeholder';
-                    preview.textContent = type === 'image' ? '🖼️' : type === 'code' ? '〈/〉' : '▶';
+                    preview.textContent = type === 'image' ? '🖼️' : type === 'code' ? '〈/〉' : type === 'pdf' ? 'PDF' : type === 'text' ? 'TXT' : type === 'binary' ? '0101' : '▶';
                     const title = document.createElement('h3');
                     title.className = 'box-title';
                     title.textContent = item.title;
@@ -289,6 +298,9 @@
                     box.append(preview, title, description);
                     box.addEventListener('click', () => {
                         if (type === 'code') window.open(item.url, '_blank', 'noopener');
+                        else if (type === 'pdf') launchDocumentViewer(item.title, item.url, 'pdf');
+                        else if (type === 'text') launchDocumentViewer(item.title, item.url, 'text');
+                        else if (type === 'binary') launchDocumentViewer(item.title, item.url, 'binary');
                         else launchAssetViewer(item.title, item.url);
                     });
                     grid.appendChild(box);
@@ -382,6 +394,9 @@
         document.getElementById('filterVideos').addEventListener('change', applyFilters);
         document.getElementById('filterImages').addEventListener('change', applyFilters);
         document.getElementById('filterCode').addEventListener('change', applyFilters);
+        document.getElementById('filterPdf').addEventListener('change', applyFilters);
+        document.getElementById('filterText').addEventListener('change', applyFilters);
+        document.getElementById('filterBinary').addEventListener('change', applyFilters);
         document.getElementById('searchButton').addEventListener('click', () => runDatabaseSearch());
         document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runDatabaseSearch(); });
         document.getElementById('backToSearchLink').addEventListener('click', () => showView('search'));
