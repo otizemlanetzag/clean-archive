@@ -139,7 +139,7 @@
                             <p style="color: #2e7d32;">✓ Native HTML5 Loop</p>
                         </div>
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-        <script>
+    <script>
         // View Navigation Switcher
         function showView(viewName) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
@@ -169,13 +169,13 @@
         }
 
         // CSV Parser and Search Engine
-        async function runDatabaseSearch(forcedQuery = null) {
-            // אם הועבר ערך לפונקציה (למשל מטעינת העמוד), נשתמש בו. אחרת, ניקח מתיבת ההקלדה.
+        async function runDatabaseSearch(forcedQuery = null, updateUrl = true) {
+            // לוקח את הערך מהפרמטר או מתיבת ההקלדה בשורת הכתובת המדומה
             const query = forcedQuery !== null ? forcedQuery.trim() : document.getElementById('searchInput').value.trim();
             
             if (!query) return;
 
-            // עדכון שורת החיפוש בממשק לערך הנוכחי
+            // מעדכן את התיבה הוויזואלית לערך הנוכחי
             document.getElementById('searchInput').value = query;
             
             showView('search');
@@ -188,9 +188,11 @@
             grid.innerHTML = '<div class="status-message">Searching local database matrix...</div>';
             displayQuery.textContent = `Search results for "${query}"`;
 
-            // עדכון חזותי של שורת הכתובת בממשק כדי שתציג את הפרמטר ?q=
-            const cleanUrlParam = encodeURIComponent(query);
-            console.log(`Updating browser parameters to: ?q=${cleanUrlParam}`);
+            // מנגנון קריטי: מעדכן את ה-URL האמיתי של הדפדפן למעלה במידה והחיפוש בוצע ידנית
+            if (updateUrl) {
+                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?q=' + encodeURIComponent(query);
+                window.history.pushState({ path: newUrl }, '', newUrl);
+            }
 
             try {
                 const response = await fetch('data/DATABASE.CSV');
@@ -264,14 +266,31 @@
             }
         }
 
-        // מנגנון בדיקה אוטומטי בעת טעינת העמוד (האזנה לפרמטר ?q= בכתובת האתר האמיתית)
+        // האזנה לטעינת העמוד (בדיקה אם יש ?q= בכתובת כשהדף נפתח לראשונה)
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const queryParam = urlParams.get('q');
             
             if (queryParam) {
-                // אם נמצא פרמטר q בכתובת האתר האמיתית, נריץ את החיפוש מיד
-                runDatabaseSearch(queryParam);
+                // מריץ את החיפוש האוטומטי, ומסמן לו false כדי שלא ישכתב את ה-URL שוב
+                runDatabaseSearch(queryParam, false);
+            }
+        });
+
+        // האזנה לכפתורי "קדימה" ו"אחורה" של הדפדפן האמיתי, כדי שהחיפושים ישתנו בהתאם
+        window.addEventListener('popstate', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryParam = urlParams.get('q');
+            if (queryParam) {
+                runDatabaseSearch(queryParam, false);
+            } else {
+                // אם חזרנו לדף הבית הריק
+                document.getElementById('searchInput').value = '';
+                document.getElementById('boxesGrid').innerHTML = '<div class="status-message">Your database content will load here.</div>';
+                document.getElementById('displayQuery').textContent = 'Discover Assets';
+                document.getElementById('displayCount').textContent = 'Enter a query above';
+                document.getElementById('resultsSummary').textContent = 'Awaiting input...';
+                showView('search');
             }
         });
 
