@@ -1,5 +1,9 @@
 import ipaddress
 import json
+import os
+import base64
+import urllib.request
+import urllib.error
 import socket
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, urljoin
@@ -72,6 +76,58 @@ def fetch_public_page(url):
         session.close()
 
 
+REGISTRY_REPO = os.environ.get("CLEAN_ARCHIVE_REGISTRY_REPO", "otizemlanetzag/clean-archive")
+REGISTRY_PATH = "data/OFFICIAL_SITES.json"
+
+
+def github_api(method, path, payload=None):
+    token = os.environ.get("CLEAN_ARCHIVE_GITHUB_TOKEN", "")
+    if not token:
+        raise RuntimeError("Registry storage is not configured. Set CLEAN_ARCHIVE_GITHUB_TOKEN in the deployment environment.")
+    url = "https://api.github.com" + path
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request = urllib.request.Request(url, data=data, method=method, headers={
+        "Authorization": "Bearer " + token,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+        "User-Agent": "CleanArchiveSiteRegistry"
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=8) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read(500).decode("utf-8", errors="replace")
+        raise RuntimeError("Registry storage returned GitHub HTTP " + str(exc.code) + ": " + detail)
+
+
+def add_to_official_registry(site_url):
+    repo = REGISTRY_REPO
+    api_path = "/repos/" + repo + "/contents/" + REGISTRY_PATH
+    try:
+        current = github_api("GET", api_path)
+        raw = base64.b64decode(current["content"]).decode("utf-8")
+        registry = json.loads(raw)
+        sha = current["sha"]
+    except RuntimeError as exc:
+        if "HTTP 404" not in str(exc):
+            raise
+        registry, sha = [], None
+    if not isinstance(registry, list):
+        raise RuntimeError("Official registry JSON must contain a list.")
+    normalized = site_url.rstrip("/")
+    for entry in registry:
+        if isinstance(entry, dict) and str(entry.get("url", "")).rstrip("/").casefold() == normalized.casefold():
+            return False
+    registry.append({"url": normalized, "verified": True, "open_source_confirmed": True})
+    encoded = base64.b64encode((json.dumps(registry, ensure_ascii=False, indent=2) + "\\n").encode("utf-8")).decode("ascii")
+    body = {"message": "Add verified open-source site to official registry", "content": encoded}
+    if sha:
+        body["sha"] = sha
+    github_api("PUT", api_path, body)
+    return True
+
+
 class handler(BaseHTTPRequestHandler):
     def _send(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -101,11 +157,19 @@ class handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             url = validate_public_url(payload.get("url"))
             token = payload.get("token")
+            consent = payload.get("consent")
+            if consent is not True:
+                return self._send(400, {"verified": False, "message": "You must confirm: I own this website and confirm it is open source."})
             if not isinstance(token, str) or not token.startswith(TOKEN_PREFIX) or len(token) > 128:
                 return self._send(400, {"verified": False, "message": "Generate a new verification text first."})
             page = fetch_public_page(url)
             if token.casefold() in page.casefold():
-                return self._send(200, {"verified": True, "message": "Verified: the exact verification text was found on the public website."})
+                try:
+                    added = add_to_official_registry(url)
+                except RuntimeError as exc:
+                    return self._send(503, {"verified": True, "added": False, "message": "Ownership verified, but the official registry could not be updated: " + str(exc)})
+                message = "Website verified and added to the official registry." if added else "Website verified; it is already in the official registry."
+                return self._send(200, {"verified": True, "added": added, "message": message})
             return self._send(200, {"verified": False, "message": "The verification text was not found. Publish it on a public page on your website, then try again."})
         except ValueError as exc:
             self._send(400, {"verified": False, "message": str(exc)})
