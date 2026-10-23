@@ -122,6 +122,24 @@
             </section>
 
             <!-- SECTION 2: MULTI-VIEWER VIEW (VIDEO & IMAGE) -->
+            <section id="documentSection" class="view-section">
+                <div class="back-link" id="documentBackLink">&larr; Back to Search Results</div>
+                <div class="viewer-layout">
+                    <main class="main-display" id="documentDisplay" style="background:#f5f5f5;color:#222;display:block;overflow:auto;min-height:450px;">
+                        <iframe id="pdfFrame" title="Built-in PDF reader" style="display:none;width:100%;height:70vh;border:0;background:white;"></iframe>
+                        <pre id="textDisplay" style="display:none;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.5 ui-monospace,monospace;margin:0;"></pre>
+                        <pre id="binaryDisplay" style="display:none;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 ui-monospace,monospace;margin:0;"></pre>
+                        <p id="documentStatus">Choose a document from the search results.</p>
+                    </main>
+                    <aside class="metadata-sidebar">
+                        <h3 class="asset-title" id="documentTitle">Document Viewer</h3>
+                        <div class="meta-group"><h4>Content Type</h4><p id="documentType">Document</p></div>
+                        <div class="meta-group"><h4>Display</h4><p id="documentInfo">Built-in reader</p></div>
+                        <button class="action-btn" id="downloadDocumentBtn">Download File</button>
+                    </aside>
+                </div>
+            </section>
+
             <section id="playerSection" class="view-section">
                 <div class="back-link" id="backToSearchLink">&larr; Back to Search Results</div>
                 <div class="viewer-layout">
@@ -170,6 +188,9 @@
                 document.getElementById('tabHome').classList.add('active');
             } else if(viewName === 'player') {
                 document.getElementById('playerSection').classList.add('active');
+                document.getElementById('tabPlayer').classList.add('active');
+            } else if(viewName === 'document') {
+                document.getElementById('documentSection').classList.add('active');
                 document.getElementById('tabPlayer').classList.add('active');
             }
         }
@@ -310,6 +331,48 @@
             resultsSummary.textContent = filtered.length ? 'Showing 1-' + filtered.length + ' of ' + filtered.length : 'Showing 0 items';
         }
 
+        async function launchDocumentViewer(title, url, type) {
+            showView('document');
+            currentAssetUrl = url;
+            currentAssetTitle = title;
+            document.getElementById('documentTitle').textContent = title;
+            document.getElementById('documentType').textContent = type === 'pdf' ? 'PDF document' : type === 'binary' ? 'Binary file' : 'Text file';
+            document.getElementById('documentInfo').textContent = type === 'binary' ? 'Binary preview (0 and 1)' : 'Built-in reader';
+            const pdf = document.getElementById('pdfFrame');
+            const text = document.getElementById('textDisplay');
+            const binary = document.getElementById('binaryDisplay');
+            const status = document.getElementById('documentStatus');
+            pdf.style.display = 'none'; text.style.display = 'none'; binary.style.display = 'none';
+            status.style.display = 'none';
+            if (type === 'pdf') {
+                pdf.src = url;
+                pdf.style.display = 'block';
+                return;
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const buffer = await response.arrayBuffer();
+                if (type === 'text') {
+                    text.textContent = new TextDecoder().decode(buffer);
+                    text.style.display = 'block';
+                } else {
+                    const bytes = new Uint8Array(buffer);
+                    const lines = [];
+                    for (let i = 0; i < bytes.length; i += 16) {
+                        const chunk = bytes.subarray(i, i + 16);
+                        const bits = Array.from(chunk, b => b.toString(2).padStart(8, '0')).join(' ');
+                        lines.push(i.toString(16).padStart(8, '0') + '  ' + bits);
+                    }
+                    binary.textContent = lines.join('\n') || '(Empty file)';
+                    binary.style.display = 'block';
+                }
+            } catch (error) {
+                status.style.display = 'block';
+                status.textContent = 'Could not load this file here. The source may block cross-origin access. Use Download File to open it locally.';
+            }
+        }
+
         function launchAssetViewer(assetTitle, assetUrl) {
             showView('player');
             currentAssetUrl = assetUrl;
@@ -400,6 +463,8 @@
         document.getElementById('searchButton').addEventListener('click', () => runDatabaseSearch());
         document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') runDatabaseSearch(); });
         document.getElementById('backToSearchLink').addEventListener('click', () => showView('search'));
+        document.getElementById('documentBackLink').addEventListener('click', () => showView('search'));
+        document.getElementById('downloadDocumentBtn').addEventListener('click', triggerAssetDownload);
         document.getElementById('navBackBtn').addEventListener('click', () => showView('search'));
         document.getElementById('tabHome').addEventListener('click', () => showView('search'));
         document.getElementById('tabPlayer').addEventListener('click', () => {
