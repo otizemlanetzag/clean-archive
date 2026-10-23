@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Database Search</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+        body { background-color: #f5f5f5; padding: 20px; }
+        .site-container { width: 100%; max-width: 1200px; margin: 0 auto; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        /* Internal Tabs Bar */
+        .tabs-bar { display: flex; align-items: flex-end; padding: 8px 8px 0 8px; background-color: #e0e0e0; overflow-x: auto; white-space: nowrap; }
+        .tab { display: flex; align-items: center; gap: 8px; background-color: #d0d0d0; padding: 6px 16px; border-radius: 8px 8px 0 0; font-size: 13px; color: #555; margin-right: 4px; cursor: pointer; }
+        .tab.active { background-color: #f0f0f0; color: #000; font-weight: 500; }
+        .tab-icon { width: 14px; height: 14px; background-color: #888; border-radius: 50%; }
+        .add-tab-btn { padding: 6px 10px; font-size: 16px; color: #555; cursor: pointer; margin-bottom: 2px; user-select: none; }
+
+        /* Navigation & Address Bar (Search Box) */
+        .nav-bar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background-color: #f0f0f0; border-bottom: 1px solid #ddd; }
+        .nav-buttons { display: flex; gap: 8px; align-items: center; }
+        .nav-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 50%; cursor: pointer; font-size: 16px; color: #555; }
+        .nav-btn:hover { background-color: #dbdbdb; }
+        .url-bar { flex-grow: 1; display: flex; align-items: center; background-color: #ffffff; border: 1px solid #ccc; border-radius: 20px; padding: 2px 14px; min-height: 32px; }
+        .url-input { width: 100%; border: none; outline: none; font-size: 14px; color: #333; background: transparent; }
+        .search-btn { background: none; border: none; cursor: pointer; color: #666; display: flex; align-items: center; justify-content: center; margin-right: auto; padding: 4px; }
+        .search-btn:hover { color: #000; }
+
+        /* Homepage Content */
+        .site-content { background-color: #ffffff; min-height: 500px; padding: 40px 24px; }
+        .content-title { font-size: 24px; color: #333; margin-bottom: 24px; font-weight: 600; text-align: left; }
+        
+        /* Responsive Grid Layout */
+        .boxes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .content-box { background-color: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; text-align: left; transition: transform 0.2s, box-shadow 0.2s; }
+        .content-box:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .box-image-placeholder { width: 100%; height: 140px; background-color: #eceece; border-radius: 6px; margin-bottom: 14px; }
+        .box-title { font-size: 16px; color: #222; margin-bottom: 8px; font-weight: 500; }
+        .box-text { font-size: 14px; color: #666; line-height: 1.4; }
+        
+        /* Status Messages */
+        .status-message { text-align: center; color: #666; padding: 40px; font-size: 16px; grid-column: 1 / -1; }
+
+        @media (max-width: 600px) { .boxes-grid { grid-template-columns: 1fr; gap: 16px; } .content-title { font-size: 20px; } }
+    </style>
+</head>
+<body>
+
+    <div class="site-container">
+        
+        <!-- 1. Tabs Bar -->
+        <div class="tabs-bar">
+            <div class="tab active">
+                <span class="tab-icon"></span>
+                <span>Home</span>
+            </div>
+            <div class="tab">
+                <span class="tab-icon"></span>
+                <span>Second Page</span>
+            </div>
+            <div class="add-tab-btn" title="Open new tab">+</div>
+        </div>
+
+        <!-- 2. Navigation & Address Bar (Acts as the search box) -->
+        <div class="nav-bar">
+            <div class="nav-buttons">
+                <button class="nav-btn" title="Back">&larr;</button>
+                <button class="nav-btn" title="Forward">&rarr;</button>
+                <button class="nav-btn" title="Reload">&#x21BB;</button>
+            </div>
+
+            <div class="url-bar">
+                <input type="text" id="searchInput" class="url-input" placeholder="Search the database from the homepage..." />
+                <button class="search-btn" id="searchButton" title="Search">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. Homepage Content Area -->
+        <div class="site-content">
+            
+            <!-- Section Title -->
+            <h2 class="content-title" id="sectionTitle">Sample Content</h2>
+            
+            <!-- Dynamic Grid Structure -->
+            <div class="boxes-grid" id="boxesGrid">
+                <div class="status-message">Type something in the address bar above to filter content from your CSV file.</div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Search Logic in JavaScript -->
+    <script>
+        async function performHomeSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const grid = document.getElementById('boxesGrid');
+            const sectionTitle = document.getElementById('sectionTitle');
+
+            if (!query) {
+                grid.innerHTML = '<div class="status-message">Type something in the address bar above to filter content from your CSV file.</div>';
+                sectionTitle.textContent = "Sample Content";
+                return;
+            }
+
+            grid.innerHTML = '<div class="status-message">Searching database...</div>';
+            sectionTitle.textContent = `Results for: "${query}"`;
+
+            try {
+                // Fetching the CSV file inside the data folder
+                const response = await fetch('data/DATABASE.CSV');
+                if (!response.ok) {
+                    throw new Error('Could not load DATABASE.CSV file.');
+                }
+
+                const csvText = await response.text();
+                const lines = csvText.split('\n');
+                const results = [];
+
+                // Scanning the first column (index 0) in the CSV rows
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    const columns = line.split(',');
+                    const firstColumnValue = columns[0] ? columns[0].replace(/"/g, '') : '';
+
+                    if (firstColumnValue.toLowerCase().includes(query.toLowerCase())) {
+                        results.push(firstColumnValue);
+                    }
+                }
+
+                grid.innerHTML = '';
+
+                if (results.length === 0) {
+                    grid.innerHTML = '<div class="status-message">No matching items found on the homepage.</div>';
+                } else {
+                    // Generates a dynamic card for each item found in the first column
+                    results.forEach((itemTitle) => {
+                        const box = document.createElement('div');
+                        box.className = 'content-box';
+                        box.innerHTML = `
+                            <div class="box-image-placeholder"></div>
+                            <h3 class="box-title">${itemTitle}</h3>
+                            <p class="box-text">Successfully retrieved from the first column of your database.</p>
+                        `;
+                        grid.appendChild(box);
+                    });
+                }
+
+            } catch (error) {
+                console.error(error);
+                grid.innerHTML = `<div class="status-message" style="color: red;">Error: ${error.message}<br><small>Make sure the file exists at: data/DATABASE.CSV</small></div>`;
+            }
+        }
+
+        // Event listeners for search triggers (clicking the icon or pressing Enter)
+        document.getElementById('searchButton').addEventListener('click', performHomeSearch);
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performHomeSearch();
+            }
+        });
+    </script>
+</body>
+</html>
