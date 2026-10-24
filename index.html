@@ -129,7 +129,6 @@
         <!-- Tabs Bar -->
         <div class="tabs-bar" id="tabsBar">
             <div id="tabHome" class="tab active" data-view="home"><span class="tab-label">Home</span><button class="tab-close" type="button" aria-label="Close tab" title="Close tab">×</button></div>
-            <div id="tabPlayer" class="tab" data-view="search"><span class="tab-label">Search Workspace</span><button class="tab-close" type="button" aria-label="Close tab" title="Close tab">×</button></div>
             <div class="add-tab-btn" id="addTabBtn" title="Open a new tab" aria-label="Open a new tab">+</div>
         </div>
 
@@ -282,6 +281,9 @@
             if (section) section.classList.add('active');
             if (keepCurrentTab && currentTab && currentTab.isConnected) {
                 currentTab.classList.add('active');
+                currentTab.dataset.view = viewName === 'document' || viewName === 'player' ? 'search' : viewName;
+                const label = currentTab.querySelector('.tab-label');
+                if (label) label.textContent = viewName === 'home' ? 'Home' : viewName === 'verify' ? 'Verify Site' : 'Search Workspace';
                 return;
             }
             const tabView = viewName === 'document' || viewName === 'player' ? 'search' : viewName;
