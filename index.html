@@ -166,7 +166,7 @@
             </section>
             
             <!-- SECTION 1: SEARCH RESULTS VIEW -->
-            <section id="searchSection" class="view-section active">
+            <section id="searchSection" class="view-section">
                 <div class="search-header">
                     <h2 class="search-title" id="displayQuery">Discover Assets</h2>
                     <div class="search-count" id="displayCount">Enter a query above</div>
@@ -273,12 +273,17 @@
         let allSearchResults = [];
         let activeSearchQuery = '';
 
-        function showView(viewName) {
+        function showView(viewName, keepCurrentTab = false) {
+            const currentTab = document.querySelector('.tab.active');
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if (!keepCurrentTab) document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             const sectionByView = {home:'homeSection', search:'searchSection', player:'playerSection', verify:'verifySection', document:'documentSection'};
             const section = document.getElementById(sectionByView[viewName] || 'homeSection');
             if (section) section.classList.add('active');
+            if (keepCurrentTab && currentTab && currentTab.isConnected) {
+                currentTab.classList.add('active');
+                return;
+            }
             const tabView = viewName === 'document' || viewName === 'player' ? 'search' : viewName;
             const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.dataset.view === tabView);
             if (activeTab) activeTab.classList.add('active');
@@ -334,7 +339,7 @@
             if (!query) return;
 
             document.getElementById('searchInput').value = query;
-            showView('search');
+            showView('search', true);
             
             const grid = document.getElementById('boxesGrid');
             const displayQuery = document.getElementById('displayQuery');
