@@ -128,8 +128,8 @@
     <div class="site-container">
         <!-- Tabs Bar -->
         <div class="tabs-bar" id="tabsBar">
-            <div id="tabHome" class="tab active" data-view="home"><span class="tab-label">Home</span></div>
-            <div id="tabPlayer" class="tab" data-view="search"><span class="tab-label">Search Workspace</span></div>
+            <div id="tabHome" class="tab active" data-view="home"><span class="tab-label">Home</span><button class="tab-close" type="button" aria-label="Close tab" title="Close tab">×</button></div>
+            <div id="tabPlayer" class="tab" data-view="search"><span class="tab-label">Search Workspace</span><button class="tab-close" type="button" aria-label="Close tab" title="Close tab">×</button></div>
             <div class="add-tab-btn" id="addTabBtn" title="Open a new tab" aria-label="Open a new tab">+</div>
         </div>
 
@@ -289,6 +289,32 @@
             if (activeTab) activeTab.classList.add('active');
         }
 
+        function closeTab(tab) {
+            const tabs = Array.from(document.querySelectorAll('#tabsBar .tab'));
+            if (tabs.length <= 1) return;
+            const wasActive = tab.classList.contains('active');
+            const index = tabs.indexOf(tab);
+            tab.remove();
+            if (wasActive) {
+                const remaining = Array.from(document.querySelectorAll('#tabsBar .tab'));
+                const nextTab = remaining[Math.min(index, remaining.length - 1)];
+                if (nextTab) showView(nextTab.dataset.view || 'home');
+            }
+        }
+
+        function wireTab(tab) {
+            const close = tab.querySelector('.tab-close');
+            if (close) close.addEventListener('click', event => {
+                event.stopPropagation();
+                closeTab(tab);
+            });
+            tab.addEventListener('click', event => {
+                if (!event.target.closest('.tab-close')) showView(tab.dataset.view || 'home');
+            });
+        }
+
+        document.querySelectorAll('#tabsBar .tab').forEach(wireTab);
+
         function createHomeTab() {
             const tab = document.createElement('div');
             tab.className = 'tab';
@@ -301,15 +327,9 @@
             close.type = 'button';
             close.textContent = '×';
             close.setAttribute('aria-label', 'Close tab');
-            close.addEventListener('click', event => {
-                event.stopPropagation();
-                const wasActive = tab.classList.contains('active');
-                tab.remove();
-                if (wasActive) showView('home');
-                if (!document.querySelector('.tab')) createHomeTab();
-            });
+            close.title = 'Close tab';
             tab.append(label, close);
-            tab.addEventListener('click', () => showView(tab.dataset.view));
+            wireTab(tab);
             document.getElementById('tabsBar').insertBefore(tab, document.getElementById('addTabBtn'));
             showView('home');
         }
