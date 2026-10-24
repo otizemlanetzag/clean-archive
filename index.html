@@ -72,6 +72,55 @@
         .action-btn { width: 100%; padding: 10px; border-radius: 6px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; background-color: #0066cc; color: white; margin-top: auto; }
 
         @media (max-width: 850px) { .viewer-layout, .search-layout { flex-direction: column; } .metadata-sidebar, .filters-sidebar { width: 100%; } .boxes-grid { grid-template-columns: 1fr; } }
+    
+        /* Refined, modern visual theme */
+        :root { color-scheme: light; }
+        body { background:linear-gradient(135deg,#101827 0%,#182b43 100%); padding:28px clamp(12px,3.7vw,56px); color:#182538; }
+        .site-container { min-height:calc(100vh - 56px); background:#f4f8fc; border:1px solid rgba(255,255,255,.2); border-radius:18px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+        .tabs-bar { gap:7px; padding:12px 16px 0; background:#eaf1f8; border-bottom:1px solid #d7e2ee; }
+        .tab { min-width:180px; max-width:260px; height:43px; border:1px solid #d3deea; border-bottom:0; border-radius:11px 11px 0 0; background:#dce7f2; padding:7px 13px; color:#53657a; transition:background .18s,color .18s; }
+        .tab.active { background:#f4f8fc; color:#182538; font-weight:650; }
+        .tab:hover { color:#14263b; }
+        .tab-close { color:#60748b; border-radius:6px; }
+        .tab-close:hover { background:#cbd9e8; }
+        .add-tab-btn { width:42px; height:43px; font-size:32px; color:#496783; border-radius:9px; transition:background .18s; }
+        .add-tab-btn:hover { background:#d5e3f1; }
+        .nav-bar { padding:13px 18px; background:#f4f8fc; }
+        .url-bar { background:#fff; border:1px solid #d3dfeb; border-radius:13px; min-height:47px; padding:3px 17px; box-shadow:0 2px 6px rgba(32,61,91,.04); transition:border-color .2s,box-shadow .2s; }
+        .url-bar:focus-within { border-color:#6097d2; box-shadow:0 0 0 3px rgba(65,135,207,.13); }
+        .url-input { font-size:15px; }
+        .site-content { background:#f4f8fc; min-height:calc(100vh - 175px); padding:24px clamp(16px,3vw,42px) 38px; }
+        #homeSection { max-width:1050px; margin:0 auto; padding:10px 0 18px; }
+        .home-intro { margin:4px 0 34px; text-align:center; }
+        .home-eyebrow { display:inline-block; margin-bottom:10px; color:#3976b7; background:#e1eefb; border:1px solid #cfe2f6; border-radius:999px; padding:5px 11px; font-size:11px; font-weight:750; letter-spacing:.12em; text-transform:uppercase; }
+        .home-heading { color:#172b43; font-size:clamp(28px,4vw,40px); line-height:1.15; letter-spacing:-.04em; font-weight:750; margin-bottom:10px; }
+        .home-subtitle { color:#6b7c90; font-size:15px; line-height:1.6; }
+        .home-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; padding:0; }
+        .home-tile { position:relative; width:100%; max-width:265px; height:170px; border:1px solid #dce5ef; border-radius:16px; background:linear-gradient(145deg,#fff 0%,#edf4fb 100%); box-shadow:0 5px 14px rgba(35,66,99,.06),0 1px 2px rgba(35,66,99,.04); display:flex; flex-direction:column; gap:12px; align-items:flex-start; justify-content:flex-end; text-align:left; padding:22px; font-size:16px; font-weight:650; color:#20364f; transition:transform .2s,border-color .2s,box-shadow .2s; }
+        .home-tile::before { content:attr(data-symbol); display:flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:12px; background:#e0edfb; color:#2c6cae; font-size:21px; font-weight:600; }
+        .home-tile::after { content:'↗'; position:absolute; top:18px; right:19px; color:#9aacc0; font-size:17px; opacity:0; transform:translate(-3px,3px); transition:opacity .2s,transform .2s; }
+        .home-tile:hover { transform:translateY(-4px); border-color:#9dbfe3; box-shadow:0 14px 28px rgba(35,76,122,.12); filter:none; }
+        .home-tile:hover::after { opacity:1; transform:translate(0,0); }
+        #githubTile::before { background:#e8eaf0; color:#27364a; }
+        #randomVideoTile::before { background:#e3f5ee; color:#238364; }
+        #randomImageTile::before { background:#f2e9ff; color:#7c4cb4; }
+        #reportContentTile::before { background:#fff0e5; color:#b9692e; }
+        #sendContentTile::before { background:#e4efff; color:#3d70c5; }
+        @media (max-width:650px) {
+          body { padding:10px; }
+          .site-container { min-height:calc(100vh - 20px); border-radius:14px; }
+          .tabs-bar { padding:9px 9px 0; }
+          .tab { min-width:135px; height:40px; }
+          .add-tab-btn { min-width:36px; width:36px; font-size:29px; }
+          .nav-bar { padding:10px; }
+          .url-bar { min-height:44px; }
+          .site-content { padding:18px 14px 28px; }
+          .home-intro { margin-bottom:24px; }
+          .home-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+          .home-tile { height:145px; padding:15px; font-size:14px; border-radius:13px; }
+          .home-tile::before { width:36px; height:36px; }
+        }
+
     </style>
 </head>
 <body>
@@ -101,13 +150,18 @@
 
         <div class="site-content">
             <section id="homeSection" class="view-section active">
+                <div class="home-intro">
+                    <span class="home-eyebrow">Open content, organized</span>
+                    <h1 class="home-heading">Welcome to Clean Archive</h1>
+                    <p class="home-subtitle">A simple place to discover, share, and explore public content.</p>
+                </div>
                 <div class="home-grid">
-                    <button class="home-tile" id="addSiteTile">Add your site</button>
-                    <button class="home-tile" id="sendContentTile">Send content</button>
-                    <button class="home-tile" id="githubTile">github</button>
-                    <button class="home-tile" id="randomVideoTile">Random<br>video</button>
-                    <button class="home-tile" id="randomImageTile">Random<br>image</button>
-                    <button class="home-tile" id="reportContentTile">Report<br>content</button>
+                    <button class="home-tile" id="addSiteTile" data-symbol="＋">Add your site</button>
+                    <button class="home-tile" id="sendContentTile" data-symbol="⇧">Send content</button>
+                    <button class="home-tile" id="githubTile" data-symbol="⌘">github</button>
+                    <button class="home-tile" id="randomVideoTile" data-symbol="▶">Random<br>video</button>
+                    <button class="home-tile" id="randomImageTile" data-symbol="▧">Random<br>image</button>
+                    <button class="home-tile" id="reportContentTile" data-symbol="!">Report<br>content</button>
                 </div>
             </section>
             
